@@ -5,6 +5,22 @@ Calcula si las iniciativas de cada indicador alcanzan para cumplir la meta 2027 
 - **`index.html`**: el tablero web. Ábrelo con doble clic o publícalo con GitHub Pages. No necesita instalar nada.
 - **`Plantilla_Suficiencia.xlsx`**: la plantilla de Excel. Usa las mismas fórmulas que el tablero, y el tablero puede importarla.
 
+## Descargar el proyecto en otro computador
+
+- **Sin instalar nada:** en GitHub, botón verde **Code › Download ZIP**. Descomprime el archivo y abre `index.html`.
+- **Con Git:** `git clone https://github.com/BrianBarreto93/Calculadora-de-Suficiencias.git`
+
+Qué necesita cada parte:
+
+| Parte | Requisito |
+|---|---|
+| Tablero (`index.html`) | Un navegador moderno: Edge, Chrome, Firefox o Safari |
+| Botón *Importar Excel* | Internet la primera vez que se usa, porque el lector de Excel se descarga de cdnjs |
+| Fuentes del tablero | Internet (Google Fonts). Sin internet se usan las fuentes del sistema |
+| Plantilla de Excel | Microsoft Excel 2016 o posterior |
+| Herramientas `.ps1` | Windows con Excel (y Edge o Chrome para `probar_tablero.ps1`) |
+| Prueba del motor | Node.js 18 o posterior (opcional) |
+
 ## Cómo se usa
 
 1. Elige un indicador en **Tus indicadores** o crea uno nuevo.
@@ -27,12 +43,36 @@ Los datos se guardan solo en tu navegador. Para compartirlos, usa **Más › Gua
 - **Puntos recuperados** = problema × parte del pastel × lo resuelto, sumado en todos los dolores.
 - **Suficiencia** = puntos recuperados ÷ brecha.
 
-El motor de cálculo está en `assets/js/engine.js` y replica la hoja *CÁLCULOS* del Excel. Para comprobar que ambos dan lo mismo:
+## Estructura
+
+```
+index.html                    Tablero web
+Plantilla_Suficiencia.xlsx    Plantilla de Excel
+assets/js/engine.js           Motor de cálculo (las mismas fórmulas del Excel)
+assets/js/ejemplos.js         Indicadores de ejemplo
+assets/js/app.js              Interfaz del tablero
+assets/css/app.css            Estilos
+tests/paridad_excel.test.js   Prueba: motor web = Excel
+tests/navegador/              Pruebas del tablero en el navegador
+herramientas/                 Scripts para generar y verificar el Excel y probar el tablero
+docs/prompts.md               Pedidos y prompt final del proyecto
+docs/diseno.md                Decisiones de diseño y arquitectura
+```
+
+## Verificar
 
 ```
 node --test tests/paridad_excel.test.js
+powershell -ExecutionPolicy Bypass -File herramientas\probar_tablero.ps1
+powershell -ExecutionPolicy Bypass -File herramientas\verificar_plantilla.ps1
+```
+
+Para volver a crear la plantilla desde cero (por ejemplo, después de cambiar una fórmula):
+
+```
+powershell -ExecutionPolicy Bypass -File herramientas\generar_plantilla.ps1 -Salida Plantilla_nueva.xlsx
 ```
 
 ## Publicar con GitHub Pages
 
-En el repositorio: **Settings › Pages › Deploy from a branch › `main` / root**. El tablero queda en `https://<usuario>.github.io/Calculadora-de-Suficiencias/`.
+En el repositorio: **Settings › Pages › Deploy from a branch › `main` / root**. El tablero queda en `https://brianbarreto93.github.io/Calculadora-de-Suficiencias/`.
