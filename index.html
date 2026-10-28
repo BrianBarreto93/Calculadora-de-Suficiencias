@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Suficiencia 2027 · Calculadora</title>
+  <meta name="description" content="Calcula si tus iniciativas alcanzan para cumplir la meta 2027 de cada indicador, con la misma lógica de la plantilla de Excel.">
+  <meta name="theme-color" content="#141414">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23141414'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23ffffff' stroke-opacity='.18' stroke-width='3.5'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%23EF3829' stroke-width='3.5' stroke-linecap='round' stroke-dasharray='46 63' transform='rotate(-90 16 16)'/%3E%3Cpath d='M16 16V10.5A5.5 5.5 0 0 1 20.8 13.3Z' fill='%23F2F2F2'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,600..900&family=Geist:wght@400..700&family=Geist+Mono:wght@500;600&display=swap">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+      <symbol id="i-mas" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.4" fill="currentColor" stroke="none"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+      <symbol id="i-borrar" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6m2.5 0-.8 13.2A2 2 0 0 1 15.7 21H8.3a2 2 0 0 1-2-1.8L5.5 6M10 11v6m4-6v6"/></symbol>
+      <symbol id="i-ayuda" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M9.3 9.2a2.8 2.8 0 0 1 5.4 1c0 1.9-2.7 2.5-2.7 4"/><path d="M12 17.4h.01"/></symbol>
+      <symbol id="i-excel" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 12.5h6M9 16.5h6M12 11v7.5"/></symbol>
+      <symbol id="i-subir" viewBox="0 0 24 24"><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+      <symbol id="i-bajar" viewBox="0 0 24 24"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></symbol>
+      <symbol id="i-imprimir" viewBox="0 0 24 24"><path d="M7 9V3h10v6M7 18H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M7 14h10v7H7z"/></symbol>
+      <symbol id="i-reiniciar" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/></symbol>
+      <symbol id="i-copiar" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15h-.5A1.5 1.5 0 0 1 3 13.5v-9A1.5 1.5 0 0 1 4.5 3h9A1.5 1.5 0 0 1 15 4.5V5"/></symbol>
+      <symbol id="i-sube" viewBox="0 0 24 24"><path d="M12 19V5m-6 6 6-6 6 6"/></symbol>
+      <symbol id="i-baja" viewBox="0 0 24 24"><path d="M12 5v14m6-6-6 6-6-6"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="m8 12.3 2.7 2.7L16 9.6"/></symbol>
+      <symbol id="i-triangulo" viewBox="0 0 24 24"><path d="M10.3 4.2 2.6 17.5a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 4.2a2 2 0 0 0-3.4 0Z"/><path d="M12 9.5v4M12 17h.01"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="m9 9 6 6m0-6-6 6"/></symbol>
+      <symbol id="i-reloj" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 7v5l3 2"/></symbol>
+      <symbol id="i-cambiar" viewBox="0 0 24 24"><path d="M7 4 3 8l4 4M3 8h13M17 20l4-4-4-4M21 16H8"/></symbol>
+      <symbol id="i-menos" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M8 12h8"/></symbol>
+      <symbol id="i-bandera" viewBox="0 0 24 24"><path d="M5 21V4h11l-2 4 2 4H5"/></symbol>
+      <symbol id="i-izq" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+      <symbol id="i-der" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+      <symbol id="i-abajo" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+      <symbol id="i-cerrar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v5.5M12 7.6h.01"/></symbol>
+      <symbol id="i-ojo" viewBox="0 0 24 24"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+      <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+    </defs>
+  </svg>
+
+  <a class="saltar" href="#taller">Ir al taller para editar los datos</a>
+
+  <header class="barra oscuro" id="barra">
+    <div class="contenedor barra-in">
+      <a class="marca" href="#escenario" aria-label="Suficiencia 2027, ir al resultado">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <circle cx="16" cy="16" r="12" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="4"/>
+          <circle cx="16" cy="16" r="12" fill="none" stroke="#EF3829" stroke-width="4" stroke-linecap="round" stroke-dasharray="56 75.4" transform="rotate(-90 16 16)"/>
+          <path d="M16 16V9.5A6.5 6.5 0 0 1 21.6 12.7Z" fill="#F2F2F2"/>
+        </svg>
+        <span class="marca-nombre">Suficiencia</span>
+        <span class="marca-anio">2027</span>
+      </a>
+      <div class="barra-resumen" id="barra-resumen" aria-hidden="true"></div>
+      <nav class="barra-acciones" aria-label="Acciones generales">
+        <button class="btn-barra" type="button" data-accion="como-funciona"><svg class="ic" aria-hidden="true"><use href="#i-ayuda"/></svg><span>Cómo funciona</span></button>
+        <button class="btn-barra btn-barra--rojo" type="button" data-accion="importar"><svg class="ic" aria-hidden="true"><use href="#i-excel"/></svg><span>Importar Excel</span></button>
+        <div class="menu-envoltura">
+          <button class="btn-barra solo-icono" type="button" data-accion="menu" aria-haspopup="true" aria-expanded="false" aria-controls="menu-mas" aria-label="Más opciones"><svg class="ic" aria-hidden="true"><use href="#i-mas"/></svg></button>
+          <div class="menu" id="menu-mas" role="menu" hidden>
+            <button type="button" role="menuitem" data-accion="exportar"><svg class="ic" aria-hidden="true"><use href="#i-bajar"/></svg>Guardar una copia (.json)</button>
+            <button type="button" role="menuitem" data-accion="importar"><svg class="ic" aria-hidden="true"><use href="#i-subir"/></svg>Abrir una copia o un Excel</button>
+            <button type="button" role="menuitem" data-accion="imprimir"><svg class="ic" aria-hidden="true"><use href="#i-imprimir"/></svg>Imprimir o guardar en PDF</button>
+            <hr>
+            <button type="button" role="menuitem" data-accion="ejemplos"><svg class="ic" aria-hidden="true"><use href="#i-reiniciar"/></svg>Volver a los ejemplos</button>
+          </div>
+        </div>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="escenario oscuro" id="escenario" aria-label="Resultado del indicador">
+      <div class="contenedor">
+        <div class="riel">
+          <div class="riel-cab">
+            <h2 class="riel-titulo" id="riel-titulo">Tus indicadores</h2>
+            <span class="riel-cuenta" id="riel-cuenta"></span>
+            <div class="riel-flechas">
+              <button class="btn-redondo" type="button" data-accion="riel-izq" aria-label="Ver indicadores anteriores"><svg class="ic" aria-hidden="true"><use href="#i-izq"/></svg></button>
+              <button class="btn-redondo" type="button" data-accion="riel-der" aria-label="Ver más indicadores"><svg class="ic" aria-hidden="true"><use href="#i-der"/></svg></button>
+            </div>
+          </div>
+          <div class="riel-pista" id="riel-pista" role="group" aria-labelledby="riel-titulo"></div>
+        </div>
+
+        <div class="intro" id="intro" hidden>
+          <p><b>¿Primera vez?</b> Entiende la calculadora en un minuto: el pastel, los dolores y el anillo.</p>
+          <div class="acciones">
+            <button class="btn btn--rojo" type="button" data-accion="como-funciona">Ver cómo funciona</button>
+            <button class="btn" type="button" data-accion="cerrar-intro">Ahora no</button>
+          </div>
+        </div>
+
+        <div class="cartel" id="cartel">
+          <div class="respuesta">
+            <p class="cejilla"><span class="punto" aria-hidden="true"></span>¿Me alcanza para la meta 2027?</p>
+            <div class="titulo-fila">
+              <h1 class="titulo" id="titulo-indicador"></h1>
+              <div class="menu-envoltura">
+                <button class="btn-redondo" type="button" data-accion="menu" aria-haspopup="true" aria-expanded="false" aria-controls="menu-indicador" aria-label="Opciones del indicador"><svg class="ic" aria-hidden="true"><use href="#i-mas"/></svg></button>
+                <div class="menu" id="menu-indicador" role="menu" hidden>
+                  <button type="button" role="menuitem" data-accion="duplicar"><svg class="ic" aria-hidden="true"><use href="#i-copiar"/></svg>Duplicar indicador</button>
+                  <button type="button" role="menuitem" data-accion="eliminar" class="peligro"><svg class="ic" aria-hidden="true"><use href="#i-borrar"/></svg>Eliminar indicador</button>
+                </div>
+              </div>
+            </div>
+            <p class="meta-linea" id="meta-linea"></p>
+            <p class="frase" id="frase"></p>
+            <dl class="kpis" id="kpis"></dl>
+          </div>
+
+          <div class="pastel-zona">
+            <figure class="pastel" id="pastel">
+              <svg id="pastel-svg" viewBox="0 0 360 360" role="img" aria-labelledby="pastel-alt"></svg>
+              <figcaption class="sr" id="pastel-alt"></figcaption>
+              <div class="pastel-centro" id="pastel-centro" aria-hidden="true"></div>
+            </figure>
+            <div class="pastel-lado">
+              <h2 class="mini-titulo">El pastel del problema</h2>
+              <p class="mini-ayuda">Cada porción es un dolor. Lo blanco es lo que ya resuelven tus iniciativas; la línea punteada, lo que resolverían si todo se cumple.</p>
+              <ol class="leyenda" id="leyenda"></ol>
+            </div>
+          </div>
+        </div>
+
+        <div class="escenario-bajo">
+          <section class="panel-oscuro" aria-labelledby="vigilar-titulo">
+            <div class="panel-cab">
+              <h2 class="mini-titulo" id="vigilar-titulo">Lo que debes vigilar</h2>
+              <span class="contador" id="vigilar-cuenta"></span>
+            </div>
+            <ul class="vigilar" id="vigilar"></ul>
+          </section>
+          <section class="panel-oscuro" aria-labelledby="aportes-titulo">
+            <div class="panel-cab">
+              <h2 class="mini-titulo" id="aportes-titulo">Quién aporta más</h2>
+            </div>
+            <p class="mini-ayuda">Puntos que recupera cada iniciativa con su ejecución esperada, y cómo queda la suficiencia si falla.</p>
+            <ol class="aportes" id="aportes"></ol>
+          </section>
+        </div>
+      </div>
+    </section>
+
+    <section class="taller" id="taller" aria-labelledby="taller-titulo">
+      <div class="contenedor">
+        <div class="taller-cab">
+          <div>
+            <p class="cejilla cejilla--clara">Taller</p>
+            <h2 class="taller-titulo" id="taller-titulo">Arma el cálculo en 3 pasos</h2>
+            <p class="taller-sub">Todo lo blanco se edita. El resultado de arriba cambia mientras escribes.</p>
+          </div>
+          <ol class="pasos" id="pasos" aria-label="Avance de los pasos"></ol>
+        </div>
+        <div id="taller-cuerpo"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    <div class="contenedor">
+      <details class="ajustes" id="ajustes">
+        <summary><svg class="ic" aria-hidden="true"><use href="#i-ajustes"/></svg>Ajustes del semáforo y de las alertas<small>Aplican a todos los indicadores</small></summary>
+        <div class="ajustes-cuerpo" id="ajustes-cuerpo"></div>
+      </details>
+      <p class="pie-nota">Tus datos se guardan solo en este navegador. Para compartirlos usa <b>Más › Guardar una copia</b>, o llena la plantilla <b>Plantilla_Suficiencia.xlsx</b> e impórtala aquí. La calculadora usa exactamente las mismas fórmulas que esa plantilla.</p>
+    </div>
+  </footer>
+
+  <dialog class="dlg" id="dlg-como" aria-labelledby="dlg-titulo">
+    <div class="dlg-cuerpo">
+      <div class="dlg-cab">
+        <div>
+          <p class="cejilla cejilla--clara">Cómo funciona</p>
+          <h2 id="dlg-titulo">La suficiencia en 4 ideas</h2>
+        </div>
+        <button class="btn-icono" type="button" data-accion="cerrar-dialogo" aria-label="Cerrar"><svg class="ic" aria-hidden="true"><use href="#i-cerrar"/></svg></button>
+      </div>
+      <ol class="ideas">
+        <li class="idea"><svg class="idea-arte" data-demo="1" viewBox="0 0 360 360" aria-hidden="true"></svg><span class="paso-n">Idea 1</span><h3>El pastel es todo el problema</h3><p>Es la distancia entre tu valor de hoy y el mejor valor posible (el ideal).</p></li>
+        <li class="idea"><svg class="idea-arte" data-demo="2" viewBox="0 0 360 360" aria-hidden="true"></svg><span class="paso-n">Idea 2</span><h3>Cada porción es un dolor</h3><p>Su tamaño sale de los casos del análisis de datos. Un caso puede tener varios dolores.</p></li>
+        <li class="idea"><svg class="idea-arte" data-demo="3" viewBox="0 0 360 360" aria-hidden="true"></svg><span class="paso-n">Idea 3</span><h3>Cada iniciativa se come una parte</h3><p>Si se retrasa, come menos. La segunda iniciativa solo come lo que la primera dejó.</p></li>
+        <li class="idea"><svg class="idea-arte" data-demo="4" viewBox="0 0 360 360" aria-hidden="true"></svg><span class="paso-n">Idea 4</span><h3>El anillo es tu suficiencia</h3><p>Lo que comen tus iniciativas ÷ la brecha a la meta. Si da la vuelta completa (100 %), alcanza.</p></li>
+      </ol>
+      <p class="dlg-regla"><svg class="ic" aria-hidden="true"><use href="#i-ojo"/></svg><span><b>Una regla para no perderte:</b> lo oscuro es el resultado y solo se lee. Lo blanco es el taller: ahí escribes.</span></p>
+      <details class="glosario">
+        <summary>Glosario (12 palabras)</summary>
+        <dl>
+          <dt>Hoy (ejecutado)</dt><dd>Valor real del indicador hoy.</dd>
+          <dt>Meta 2027</dt><dd>Valor que debes alcanzar en 2027.</dd>
+          <dt>Valor ideal</dt><dd>El mejor valor posible, normalmente 100 % o 0 %.</dd>
+          <dt>Problema total (pastel)</dt><dd>Distancia entre hoy y el valor ideal.</dd>
+          <dt>Brecha</dt><dd>Distancia entre hoy y la meta. Es lo que debes recuperar.</dd>
+          <dt>Dolor</dt><dd>Una causa del problema, sacada del análisis de datos del indicador.</dd>
+          <dt>Prevalencia</dt><dd>% de casos que tienen ese dolor. La suma puede pasar de 100 % porque un caso puede tener varios dolores.</dd>
+          <dt>Parte del pastel</dt><dd>Lo que le toca a cada dolor del problema total (atribución). Siempre suma 100 %.</dd>
+          <dt>Efectividad</dt><dd>% del dolor que la iniciativa resuelve si se hace completa. Lo defines tú, con evidencia.</dd>
+          <dt>Ejecución</dt><dd>% de la iniciativa que de verdad estará listo en 2027 (retrasos o alcance parcial).</dd>
+          <dt>Suficiencia</dt><dd>Puntos recuperados ÷ brecha. 100 % o más quiere decir que las iniciativas alcanzan.</dd>
+          <dt>Aporte</dt><dd>Cuánto baja la suficiencia si esa iniciativa falla.</dd>
+        </dl>
+      </details>
+      <details class="glosario">
+        <summary>Qué significa cada etiqueta</summary>
+        <ul class="etiquetas-lista" id="etiquetas-lista"></ul>
+      </details>
+      <div class="dlg-pie"><button class="btn btn--rojo" type="button" data-accion="cerrar-dialogo">Entendido</button></div>
+    </div>
+  </dialog>
+
+  <div class="tip" id="tip" role="tooltip" hidden></div>
+  <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
+  <input type="file" id="archivo" accept=".xlsx,.xlsm,.xls,.json" hidden>
+
+  <script src="assets/js/engine.js"></script>
+  <script src="assets/js/ejemplos.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
