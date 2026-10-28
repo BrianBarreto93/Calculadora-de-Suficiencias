@@ -15,8 +15,9 @@ Una sola vista con dos zonas y una regla que se explica en una frase: **lo oscur
 
 ## Nuevo cálculo y ejemplo
 
-- **Nuevo cálculo** crea un indicador vacío para definir todo desde cero (nombre, qué es mejor, hoy, meta, casos, dolores e iniciativas) y lleva al paso 1.
-- Al abrir por primera vez hay **un solo ejemplo lleno** (Churn mensual pospago) marcado como "Ejemplo". Un cálculo vacío ofrece verlo, y el menú **Más › Ver el ejemplo lleno** lo vuelve a traer si se borró, sin tocar los cálculos propios.
+- **Nuevo cálculo** borra todos los indicadores y deja uno vacío para definir todo desde cero (nombre, qué es mejor, hoy, meta, casos, dolores e iniciativas) y lleva al paso 1. El aviso ofrece **Deshacer** durante 12 segundos.
+- Cada tarjeta del riel tiene una **papelera** para eliminar ese indicador (aparece al pasar el mouse o con el teclado, y siempre en pantallas táctiles). También se puede deshacer.
+- Al abrir por primera vez hay **un solo ejemplo lleno** (Churn mensual pospago) marcado como "Ejemplo". Un cálculo vacío ofrece verlo, y el menú **Más › Ver el ejemplo lleno** lo vuelve a traer si se borró (por ejemplo, con Nuevo cálculo), sin tocar los cálculos propios.
 - Cuando le pones tu propio nombre al ejemplo, deja de ser ejemplo: pasa a ser tu cálculo.
 
 ## El pastel

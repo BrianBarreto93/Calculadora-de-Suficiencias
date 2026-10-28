@@ -99,11 +99,28 @@
       $('[data-accion="detalle-ini"][aria-controls]', fila('ini-fila', 'i5')).click();
       ok(!det.hidden, 'abrir responsable, fecha y evidencia');
 
-      // Nuevo cálculo desde cero (botón de la barra) y llenarlo con los datos de Instalaciones
+      // Papelera de cada tarjeta: duplicar, borrar la copia desde el riel y deshacer
+      $('[data-accion="duplicar"]').click();
+      ok($$('.tarjeta[data-id]').length === 2 && $$('.tarjeta-borrar').length === 2, 'cada tarjeta tiene su papelera');
+      var copiaId = $('.tarjeta[aria-pressed="true"]').dataset.id;
+      $$('.tarjeta-borrar').filter(function (b) { return b.dataset.id !== copiaId; })[0].click();
+      ok($$('.tarjeta[data-id]').length === 1 && $('.tarjeta[data-id]').dataset.id === copiaId && titulo() === 'Churn prueba (copia)', 'la papelera borra ese indicador y deja ver el otro');
+      ok(/Eliminaste «Churn prueba»/.test($('#aviso').textContent), 'avisa qué se borró → ' + $('#aviso').textContent.replace('Deshacer', ''));
+      $('#aviso [data-accion="deshacer"]').click();
+      ok($$('.tarjeta[data-id]').length === 2, 'deshacer devuelve el indicador borrado');
+      $$('.tarjeta-borrar').filter(function (b) { return b.dataset.id === copiaId; })[0].click();
+      ok($$('.tarjeta[data-id]').length === 1 && titulo() === 'Churn prueba', 'borrar el indicador que estás viendo pasa al siguiente');
+
+      // Nuevo cálculo (botón de la barra): borra lo que había y empieza desde cero; se puede deshacer
       $('.barra [data-accion="nuevo-indicador"]').click();
       ok(titulo() === 'Indicador sin nombre', 'nuevo cálculo');
       ok($('.pastel-valor').textContent === '—', 'el cálculo nuevo empieza sin datos');
-      ok($$('.tarjeta').length === 3, 'riel: 2 cálculos + «Nuevo cálculo»');
+      ok($$('.tarjeta').length === 2, 'riel: solo el cálculo nuevo + «Nuevo cálculo» (se borró lo anterior)');
+      ok(/se borró el indicador que había/.test($('#aviso').textContent) && !!$('#aviso [data-accion="deshacer"]'), 'avisa que se borró lo anterior y ofrece deshacer');
+      $('#aviso [data-accion="deshacer"]').click();
+      ok($$('.tarjeta[data-id]').length === 1 && titulo() === 'Churn prueba', 'deshacer recupera lo que había');
+      $('.tarjeta--nueva').click();
+      ok(titulo() === 'Indicador sin nombre' && $$('.tarjeta[data-id]').length === 1, 'la tarjeta «Nuevo cálculo» del riel hace lo mismo');
       ok($$('.paso-chip.hecho').length === 0, 'cálculo nuevo sin pasos listos');
       ok($$('.dolor').length === 0 && $$('.ini').length === 0, 'sin dolores ni iniciativas: todo se define desde cero');
       ok($$('#vigilar [data-tipo="ejemplo"]').length === 1, 'ofrece ver el ejemplo lleno');
@@ -165,7 +182,7 @@
       // «Ver el ejemplo lleno»: el ejemplo se renombró (ya es un cálculo propio), así que se vuelve a agregar
       $('[data-accion="ver-ejemplo"]').click();
       ok(titulo() === 'Churn mensual pospago' && !!$('.pildora--ejemplo') && heroe() === '85%', 'Ver el ejemplo lleno lo trae de vuelta');
-      ok($$('.tarjeta[data-id]').length === 3, 'sin tocar tus cálculos');
+      ok($$('.tarjeta[data-id]').length === 2, 'sin tocar tus cálculos');
 
       $('#ajustes').open = true;
       var verde = $('[data-param="verde"]');
@@ -179,7 +196,7 @@
 
       setTimeout(function () {
         var guardado = localStorage.getItem('suficiencia.datos.v1');
-        ok(!!guardado && guardado.indexOf('Churn prueba') >= 0 && JSON.parse(guardado).version === 2, 'se guarda en el navegador');
+        ok(!!guardado && guardado.indexOf('Instalaciones en fecha (FTTH)') >= 0 && guardado.indexOf('Churn prueba') < 0 && JSON.parse(guardado).version === 2, 'se guarda en el navegador');
         terminar();
       }, 500);
     } catch (e) { out.push('EXCEPCION ' + e.message + ' | ' + e.stack); terminar(); }

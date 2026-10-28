@@ -25,7 +25,7 @@ Qué necesita cada parte:
 ## Cómo se usa
 
 1. Mira el **ejemplo lleno** (Churn mensual pospago) para ver cómo se llena un cálculo.
-2. Pulsa **Nuevo cálculo**: se crea uno vacío para que definas todo desde cero.
+2. Pulsa **Nuevo cálculo**: borra lo que había y deja un cálculo vacío para que definas todo desde cero (si fue un error, usa **Deshacer** en el aviso). Para borrar un solo indicador, usa la papelera de su tarjeta en **Tus indicadores**.
 3. En el **taller** (la parte blanca), llena los 3 pasos:
    1. Hoy, meta 2027 y si es mejor que el indicador suba o baje.
    2. Los dolores y sus casos (hasta 15).

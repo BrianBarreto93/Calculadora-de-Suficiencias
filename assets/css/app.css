@@ -167,6 +167,17 @@ ol, ul { padding: 0; list-style: none; }
   scroll-padding-inline: var(--margen); scrollbar-width: none;
 }
 .riel-pista::-webkit-scrollbar { display: none; }
+/* cada tarjeta con su papelera: aparece al pasar el mouse o con el teclado, y siempre en pantallas táctiles */
+.tarjeta-celda { position: relative; flex: 0 0 auto; display: flex; scroll-snap-align: start; }
+.tarjeta-borrar {
+  position: absolute; right: 8px; bottom: 8px; z-index: 2; display: grid; place-items: center; width: 32px; height: 32px; padding: 0;
+  border-radius: 9px; border: 1px solid var(--noche-linea); background: rgba(20, 20, 20, .82); color: var(--tiza-2);
+  opacity: 0; transition: opacity var(--dur), background var(--dur), color var(--dur), border-color var(--dur);
+}
+.tarjeta-borrar .ic { width: 16px; height: 16px; }
+.tarjeta-celda:hover .tarjeta-borrar, .tarjeta-borrar:focus-visible, .tarjeta-celda:focus-within .tarjeta-borrar { opacity: 1; }
+.tarjeta-borrar:hover { background: var(--rojo); border-color: var(--rojo); color: #fff; }
+@media (hover: none) { .tarjeta-borrar { opacity: 1; } }
 .tarjeta {
   position: relative; flex: 0 0 auto; width: 268px; height: 144px; padding: 14px 16px; overflow: hidden;
   display: grid; grid-template-rows: auto 1fr auto; gap: 4px; text-align: left; scroll-snap-align: start;

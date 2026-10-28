@@ -494,12 +494,15 @@
     $$('.tarjeta[data-id]', D.riel).forEach(function (t) { artes[t.dataset.id] = $('.tarjeta-arte', t); });
     D.riel.replaceChildren();
     var nuevas = 0;
+    // Cada tarjeta va con su papelera al lado (un botón no puede ir dentro de otro)
     estado.indicadores.forEach(function (ind) {
       var arte = artes[ind.id] || null;
-      D.riel.appendChild(tarjeta(ind, Motor.calcular(ind, estado.params), arte, arte ? 0 : nuevas++));
+      D.riel.appendChild(h('div', { class: 'tarjeta-celda' },
+        tarjeta(ind, Motor.calcular(ind, estado.params), arte, arte ? 0 : nuevas++),
+        h('button', { class: 'tarjeta-borrar', type: 'button', title: 'Eliminar indicador', 'aria-label': 'Eliminar el indicador «' + nombreDe(ind) + '»', data: { accion: 'eliminar', id: ind.id } }, icono('borrar'))));
     });
     D.riel.appendChild(h('button', { class: 'tarjeta tarjeta--nueva' + (primera ? ' entra' : ''), type: 'button', style: primera ? '--i:' + nuevas : null, data: { accion: 'nuevo-indicador' } },
-      icono('plus'), h('b', null, 'Nuevo cálculo'), h('span', null, 'Empieza desde cero')));
+      icono('plus'), h('b', null, 'Nuevo cálculo'), h('span', null, 'Borra todo y empieza de cero')));
     var k = estado.indicadores.length;
     D.rielCuenta.textContent = k + (k === 1 ? ' indicador' : ' indicadores');
     var sel = tarjetaDe(estado.sel);
@@ -516,6 +519,8 @@
     if (!vieja) return;
     var nueva = tarjeta(ind, r, $('.tarjeta-arte', vieja), 0);
     var conFoco = document.activeElement === vieja;
+    var borrar = vieja.nextElementSibling;
+    if (borrar) borrar.setAttribute('aria-label', 'Eliminar el indicador «' + nombreDe(ind) + '»');
     vieja.replaceWith(nueva);
     if (conFoco) nueva.focus({ preventScroll: true });
   }
@@ -1189,16 +1194,19 @@
   }
 
   // ---------------------------------------------------------------- acciones
-  // Nuevo cálculo de suficiencia: todo vacío para que el usuario lo defina desde cero
+  // Nuevo cálculo de suficiencia: borra todo lo que había y deja un indicador vacío para definirlo desde cero.
+  // Se puede deshacer por unos segundos.
   function nuevoIndicador() {
+    var antes = foto();
+    var habia = estado.indicadores.length;
     var ind = Motor.nuevoIndicador();
-    estado.indicadores.push(ind);
+    estado.indicadores = [ind];
     estado.sel = ind.id;
     abiertos = {};
     pintarTodo(true);
     var p1 = $('#paso-1');
     irA(p1, p1 ? $('input', p1) : null);
-    avisar('Creaste un cálculo nuevo desde cero. Empieza por el paso 1: el nombre del indicador.');
+    conDeshacer('Empezaste un cálculo nuevo desde cero' + (habia ? ': se borr' + (habia === 1 ? 'ó el indicador que había' : 'aron los ' + habia + ' indicadores que había') : '') + '. Empieza por el paso 1.', antes, 12000);
   }
   // Muestra el ejemplo lleno; si lo borraste, lo vuelve a agregar sin tocar tus cálculos
   function verEjemplo() {
@@ -1226,14 +1234,16 @@
     pintarTodo(true);
     avisar('Duplicaste «' + nombreDe(ind) + '».');
   }
-  function eliminar() {
+  // Elimina el indicador elegido (o el que se está viendo). Si era el último, queda uno vacío.
+  function eliminar(id) {
     var antes = foto();
-    var ind = actual();
+    var ind = (id && buscar(estado.indicadores, id)) || actual();
     var k = estado.indicadores.indexOf(ind);
+    var eraElVisto = ind.id === estado.sel;
     estado.indicadores.splice(k, 1);
     if (!estado.indicadores.length) estado.indicadores.push(Motor.nuevoIndicador());
-    estado.sel = estado.indicadores[Math.min(k, estado.indicadores.length - 1)].id;
-    pintarTodo(true);
+    if (eraElVisto) { estado.sel = estado.indicadores[Math.min(k, estado.indicadores.length - 1)].id; abiertos = {}; }
+    pintarTodo(eraElVisto);
     conDeshacer('Eliminaste «' + nombreDe(ind) + '».', antes);
   }
   function agregarDolor() {
@@ -1311,13 +1321,13 @@
     }
   }
 
-  function conDeshacer(texto, antes) { deshacer = antes; avisar(texto, 'Deshacer'); }
-  function avisar(texto, boton) {
+  function conDeshacer(texto, antes, ms) { deshacer = antes; avisar(texto, 'Deshacer', ms); }
+  function avisar(texto, boton, ms) {
     clearTimeout(tAviso);
     if (!boton) deshacer = null;
     fijar(D.aviso, h('span', null, texto), boton ? h('button', { type: 'button', data: { accion: 'deshacer' } }, boton) : null);
     D.aviso.classList.add('ver');
-    tAviso = setTimeout(function () { D.aviso.classList.remove('ver'); deshacer = null; }, boton ? 8000 : 4500);
+    tAviso = setTimeout(function () { D.aviso.classList.remove('ver'); deshacer = null; }, ms || (boton ? 8000 : 4500));
   }
 
   // menús
@@ -2223,7 +2233,7 @@
         break;
       case 'nuevo-indicador': nuevoIndicador(); break;
       case 'duplicar': duplicar(); break;
-      case 'eliminar': eliminar(); break;
+      case 'eliminar': eliminar(b.dataset.id); break;
       case 'sentido': actual().sentido = b.dataset.valor; recalcular(false); break;
       case 'agregar-dolor': agregarDolor(); break;
       case 'borrar-dolor': borrarDolor(b.dataset.id); break;
