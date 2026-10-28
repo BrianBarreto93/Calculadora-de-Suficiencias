@@ -85,7 +85,7 @@ function New-HojaIndicador($x, $ws, $d, $banner, $isExample) {
     SetV $ws 'E10' 'El mejor valor posible. Si lo dejas vacío: 100 si sube es mejor, 0 si baja es mejor.'
     SetV $ws 'E11' 'Distancia entre hoy y el ideal. Es TODO el problema que explican los dolores.'
     SetV $ws 'E12' 'Distancia entre hoy y la meta 2027. Es lo que las iniciativas deben recuperar.'
-    SetV $ws 'E13' 'Ej.: clientes que se dieron de baja en el periodo. Sirve para calcular la prevalencia.'
+    SetV $ws 'E13' 'Ej.: clientes que se dieron de baja en el periodo. Sirve para calcular el % dolor.'
     SetF $ws 'C11' '=IF(C8="",0,ABS(C131-C8))'
     SetF $ws 'C12' '=IF(OR(C6="",C8="",C9=""),0,MAX(0,IF(C6="Sube es mejor",C9-C8,C8-C9)))'
     $ws.Range('C11:C12').Font.Bold = $true
@@ -96,7 +96,7 @@ function New-HojaIndicador($x, $ws, $d, $banner, $isExample) {
     SetV $ws 'B16' 'Dato del dolor'
     for ($i = 0; $i -lt 6; $i++) { $c = [char](67 + $i); SetV $ws "${c}16" ("Dolor " + ($i + 1)) }
     Hdr $ws 'B16:H16'
-    $l2 = @{17 = 'Nombre del dolor'; 18 = 'Casos con este dolor'; 19 = '% Prevalencia  (casos ÷ total analizado)'; 20 = '% Atribución automática  (su parte del pastel)'; 21 = '% Atribución manual  (opcional)'; 22 = '% Atribución usada'; 23 = 'Evidencia / fuente del dato'; 24 = 'Revisión' }
+    $l2 = @{17 = 'Nombre del dolor'; 18 = 'Casos con este dolor'; 19 = '% dolor  (casos ÷ total analizado)'; 20 = 'Impacto del dolor · automático  (su porción del pastel)'; 21 = 'Impacto del dolor · manual  (opcional)'; 22 = 'Impacto del dolor · usado'; 23 = 'Evidencia / fuente del dato'; 24 = 'Revisión' }
     foreach ($k in $l2.Keys) { SetV $ws "B$k" $l2[$k] }
     $ws.Range('B17:B24').Font.Bold = $true
     Inp $ws 'C17:H18'; Inp $ws 'C21:H21'; Inp $ws 'C23:H23'; Cal $ws 'C19:H20'; Cal $ws 'C22:H22'
@@ -107,8 +107,8 @@ function New-HojaIndicador($x, $ws, $d, $banner, $isExample) {
     SetF $ws 'C19:H19' '=IF(OR(N(C18)=0,N($C$13)=0),0,C18/$C$13)'
     SetF $ws 'C20:H20' '=IF(SUM($C$19:$H$19)=0,0,C19/SUM($C$19:$H$19))'
     SetF $ws 'C22:H22' '=IF(C21="",C20,C21)'
-    SetF $ws 'C24' '=IF(SUM(C22:H22)=0,"⚠ Aún no hay dolores con casos.",IF(ABS(SUM(C22:H22)-1)<0.0005,"✔ La atribución suma 100 %.","⚠ La atribución suma "&FIXED(SUM(C22:H22)*100,1)&" %; debe sumar 100 %. Revisa la fila 21."))'
-    SetF $ws 'C25' '="La suma de prevalencias es "&FIXED(SUM(C19:H19)*100,0)&" %. Puede pasar de 100 % porque un caso puede tener varios dolores. Es normal."'
+    SetF $ws 'C24' '=IF(SUM(C22:H22)=0,"⚠ Aún no hay dolores con casos.",IF(ABS(SUM(C22:H22)-1)<0.0005,"✔ El impacto de los dolores suma 100 %.","⚠ El impacto de los dolores suma "&FIXED(SUM(C22:H22)*100,1)&" %; debe sumar 100 %. Revisa la fila 21."))'
+    SetF $ws 'C25' '="Los % dolor suman "&FIXED(SUM(C19:H19)*100,0)&" %. Puede pasar de 100 % porque un caso puede tener varios dolores. Es normal."'
     $ws.Range('C25').Font.Italic = $true
     CFAlerts $ws 'C24'
     $ws.Range('A17').RowHeight = 42; $ws.Range('A23').RowHeight = 56; $ws.Range('A16').RowHeight = 20
@@ -158,7 +158,7 @@ function New-HojaIndicador($x, $ws, $d, $banner, $isExample) {
     SetV $ws 'B49' 'Resultado por dolor'
     SetF $ws 'C49:H49' '=IF(C17="","Dolor "&(COLUMN()-2),C17)'
     Hdr $ws 'B49:H49'; $ws.Range('A49').RowHeight = 42
-    $l5 = @{50 = '% Atribución usada'; 51 = '% del dolor resuelto · Plan'; 52 = '% del dolor resuelto · Realista'; 53 = 'Puntos recuperados · Plan'; 54 = 'Puntos recuperados · Realista'; 55 = 'Alerta' }
+    $l5 = @{50 = 'Impacto del dolor'; 51 = '% del dolor resuelto · Plan'; 52 = '% del dolor resuelto · Realista'; 53 = 'Puntos recuperados · Plan'; 54 = 'Puntos recuperados · Realista'; 55 = 'Alerta' }
     foreach ($k in $l5.Keys) { SetV $ws "B$k" $l5[$k] }
     $ws.Range('B50:B55').Font.Bold = $true
     Cal $ws 'C50:H55'
@@ -348,7 +348,7 @@ try {
     Band $ps 10 'D' 'Alertas'
     SetV $ps 'B11' 'Parámetro'; SetV $ps 'C11' 'Valor'; SetV $ps 'D11' 'Qué significa'; Hdr $ps 'B11:D11'
     SetV $ps 'B12' 'Umbral para REEMPLAZAR'; SetV $ps 'C12' 0.05; SetV $ps 'D12' 'Si una iniciativa aporta menos de este % de la brecha (o su ejecución es 0 %), se marca REEMPLAZAR.'
-    SetV $ps 'B13' 'Peso mínimo para SIN COBERTURA'; SetV $ps 'C13' 0.20; SetV $ps 'D13' 'Un dolor cuya atribución es mayor a este valor...'
+    SetV $ps 'B13' 'Impacto mínimo para SIN COBERTURA'; SetV $ps 'C13' 0.20; SetV $ps 'D13' 'Un dolor cuyo impacto es mayor a este valor...'
     SetV $ps 'B14' 'Resolución mínima para SIN COBERTURA'; SetV $ps 'C14' 0.30; SetV $ps 'D14' '...y que queda resuelto menos que este valor (realista) se marca SIN COBERTURA.'
     SetV $ps 'B15' 'Tope de efectividad real'; SetV $ps 'C15' 0.99; SetV $ps 'D15' 'Ninguna iniciativa resuelve el 100 % de un dolor. También evita divisiones entre cero.'
     Cal $ps 'B12:B15'; Inp $ps 'C12:C15'; Cal $ps 'D12:D15'; Fmt $ps 'C12:C15' '0%'
@@ -459,7 +459,7 @@ try {
 
     GBand '2 · Los 4 pasos (en cada hoja de indicador, de arriba hacia abajo)'
     Pair 'PASO 1 · ¿Cuánto me falta?' 'Escribe el ejecutado, la meta 2027 y el total de casos analizados.'
-    Pair 'PASO 2 · ¿Qué lo causa?' 'Escribe los dolores y cuántos casos tiene cada uno. La plantilla calcula su peso en el pastel.'
+    Pair 'PASO 2 · ¿Qué lo causa?' 'Escribe los dolores y cuántos casos tiene cada uno. La plantilla calcula su % dolor y su impacto (su porción del pastel).'
     Pair 'PASO 3 · ¿Qué voy a hacer?' 'Escribe las iniciativas, qué % de cada dolor resuelven y qué % estará ejecutado a 2027.'
     Pair 'PASO 4 · ¿Me alcanza?' 'Solo miras: suficiencia, semáforo y qué iniciativa aporta más. Aquí no escribes nada.'
 
@@ -479,7 +479,7 @@ try {
     SetV $g "B$($e0+3)" 'Iniciativa Y: se ejecuta al'; SetV $g "C$($e0+3)" 0.5
     Inp $g "C${e0}:C$($e0+3)"; Fmt $g "C$($e0+2):C$($e0+3)" '0%'; $g.Range("B${e0}:B$($e0+3)").Font.Bold = $true
     $th = $e0 + 5
-    $hd = @('Dolor', 'Atribución (peso)', 'X resuelve', 'Y resuelve', 'X real (× ejecución)', 'Y real (× ejecución)', 'Lo que queda del dolor', '% resuelto', 'Puntos recuperados')
+    $hd = @('Dolor', 'Impacto del dolor', 'X resuelve', 'Y resuelve', 'X real (× ejecución)', 'Y real (× ejecución)', 'Lo que queda del dolor', '% resuelto', 'Puntos recuperados')
     for ($i = 0; $i -lt 9; $i++) { SetV $g ("" + [char](66 + $i) + $th) $hd[$i] }
     Hdr $g "B${th}:J${th}"; $g.Range("A$th").RowHeight = 32
     $a = $th + 1; $b = $th + 2
@@ -517,8 +517,8 @@ try {
         @('Problema total (pastel)', 'Distancia entre el ejecutado y el valor ideal.'),
         @('Brecha', 'Distancia entre el ejecutado y la meta. Es lo que debes recuperar.'),
         @('Dolor', 'Una causa del problema, sacada del análisis de datos del indicador.'),
-        @('Prevalencia', '% de casos que tienen ese dolor. La suma puede pasar de 100 % (un caso puede tener varios dolores).'),
-        @('Atribución', 'Parte del pastel que le toca a cada dolor. Siempre suma 100 %.'),
+        @('% dolor', '% de casos que tienen ese dolor. La suma puede pasar de 100 % (un caso puede tener varios dolores).'),
+        @('Impacto del dolor', 'Qué parte del problema total explica cada dolor: el tamaño de su porción del pastel. Siempre suma 100 %.'),
         @('Efectividad', '% del dolor que la iniciativa resuelve si se hace completa. Lo defines tú, con evidencia.'),
         @('Ejecución', '% de la iniciativa que de verdad estará lista a 2027 (retrasos o alcance parcial).'),
         @('Suficiencia', 'Puntos recuperados ÷ brecha. 100 % o más = las iniciativas alcanzan.'),
@@ -544,8 +544,8 @@ try {
     GBand '9 · Reglas para no romper la plantilla'
     Line '• No insertes ni borres filas o columnas en las hojas de indicador (el Resumen las lee por posición).'
     Line '• En el Paso 1 escribe solo números (2,8 y no 2,8 %). En los Pasos 2 y 3 los porcentajes sí llevan % (40 %).'
-    Line '• Si cambias una atribución a mano, cámbialas todas para que sumen 100 %.'
-    Line '• Máximo 6 dolores y 8 iniciativas por indicador (cabe en una pantalla).'
+    Line '• Si cambias un impacto a mano, cámbialos todos para que sumen 100 %.'
+    Line '• Máximo 6 dolores y 8 iniciativas por indicador. Si necesitas más (hasta 15), usa la calculadora web (suficiencia_cx.html) y exporta a Excel.'
     Line '• Las hojas están protegidas sin contraseña para cuidar las fórmulas: Revisar > Desproteger hoja.'
 
     $g.Protect($M, $true, $true, $true, $false, $true, $true, $true)

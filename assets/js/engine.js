@@ -10,8 +10,9 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var MAX_DOLORES = 6;
-  var MAX_INICIATIVAS = 8;
+  // La plantilla de Excel trae espacio para 6 dolores y 8 iniciativas; el tablero y su exportación, para 15.
+  var MAX_DOLORES = 15;
+  var MAX_INICIATIVAS = 15;
   var ESTADOS = ['En plan', 'En riesgo', 'Retrasada'];
   var ESTADOS_RIESGO = ['Retrasada', 'En riesgo'];
 
@@ -193,7 +194,7 @@
     return {
       id: nuevoId('ind-'), nombre: '', sentido: '', unidad: '%',
       ejecutado: null, meta: null, ideal: null, totalCasos: null,
-      dolores: [], iniciativas: []
+      ejemplo: false, dolores: [], iniciativas: []
     };
   }
   function nuevoDolor() { return { id: nuevoId('d-'), nombre: '', casos: null, atribucionManual: null, evidencia: '' }; }
@@ -218,6 +219,7 @@
     ind.meta = numero(o.meta);
     ind.ideal = numero(o.ideal);
     ind.totalCasos = numero(o.totalCasos);
+    ind.ejemplo = o.ejemplo === true;
     var vistos = {};
     ind.dolores = (Array.isArray(o.dolores) ? o.dolores : []).slice(0, MAX_DOLORES).map(function (d) {
       d = d && typeof d === 'object' ? d : {};

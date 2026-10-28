@@ -1,6 +1,7 @@
 /*
  * Datos de ejemplo: los mismos de las hojas IND01_Churn e IND02_Instalaciones
- * de Plantilla_Suficiencia.xlsx.
+ * de Plantilla_Suficiencia.xlsx. El tablero muestra el primero como ejemplo lleno;
+ * los dos sirven para las pruebas de paridad con el Excel.
  */
 (function (raiz, fabrica) {
   if (typeof module === 'object' && module.exports) module.exports = fabrica();
@@ -19,6 +20,7 @@
         meta: 2,
         ideal: null,
         totalCasos: 12000,
+        ejemplo: true,
         dolores: [
           { id: 'd1', nombre: 'Precio / oferta de la competencia', casos: 6000, atribucionManual: null, evidencia: 'Encuesta de salida Q2-2026 (n = 12.000 bajas)' },
           { id: 'd2', nombre: 'Fallas de red / cobertura', casos: 3600, atribucionManual: null, evidencia: 'Cruce de bajas con mapa de caídas de red (últimos 90 días)' },
@@ -43,6 +45,7 @@
         meta: 92,
         ideal: null,
         totalCasos: 9000,
+        ejemplo: true,
         dolores: [
           { id: 'd1', nombre: 'Falta de técnicos en la zona', casos: 4050, atribucionManual: null, evidencia: 'Órdenes reprogramadas por falta de cuadrilla (sistema de despacho)' },
           { id: 'd2', nombre: 'Cliente ausente o dirección errónea', casos: 2700, atribucionManual: null, evidencia: 'Visitas fallidas registradas por el técnico' },

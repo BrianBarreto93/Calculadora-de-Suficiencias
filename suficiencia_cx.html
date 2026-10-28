@@ -59,16 +59,18 @@
       </a>
       <div class="barra-resumen" id="barra-resumen" aria-hidden="true"></div>
       <nav class="barra-acciones" aria-label="Acciones generales">
-        <button class="btn-barra" type="button" data-accion="como-funciona"><svg class="ic" aria-hidden="true"><use href="#i-ayuda"/></svg><span>Cómo funciona</span></button>
-        <button class="btn-barra btn-barra--rojo" type="button" data-accion="importar"><svg class="ic" aria-hidden="true"><use href="#i-excel"/></svg><span>Importar Excel</span></button>
+        <button class="btn-barra btn-barra--compacta" type="button" data-accion="como-funciona" aria-label="Cómo funciona" title="Cómo funciona"><svg class="ic" aria-hidden="true"><use href="#i-ayuda"/></svg><span>Cómo funciona</span></button>
+        <button class="btn-barra btn-barra--compacta" type="button" data-accion="importar" aria-label="Importar Excel" title="Importar Excel: trae los datos de un Excel"><svg class="ic" aria-hidden="true"><use href="#i-subir"/></svg><span>Importar Excel</span></button>
+        <button class="btn-barra btn-barra--compacta" type="button" data-accion="exportar-excel" aria-label="Exportar Excel" title="Exportar Excel: descarga un reporte claro de tus indicadores"><svg class="ic" aria-hidden="true"><use href="#i-excel"/></svg><span>Exportar Excel</span></button>
+        <button class="btn-barra btn-barra--rojo" type="button" data-accion="nuevo-indicador" aria-label="Nuevo cálculo" title="Nuevo cálculo de suficiencia: empieza desde cero"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg><span>Nuevo cálculo</span></button>
         <div class="menu-envoltura">
           <button class="btn-barra solo-icono" type="button" data-accion="menu" aria-haspopup="true" aria-expanded="false" aria-controls="menu-mas" aria-label="Más opciones"><svg class="ic" aria-hidden="true"><use href="#i-mas"/></svg></button>
           <div class="menu" id="menu-mas" role="menu" hidden>
+            <button type="button" role="menuitem" data-accion="ver-ejemplo"><svg class="ic" aria-hidden="true"><use href="#i-ojo"/></svg>Ver el ejemplo lleno</button>
+            <hr>
             <button type="button" role="menuitem" data-accion="exportar"><svg class="ic" aria-hidden="true"><use href="#i-bajar"/></svg>Guardar una copia (.json)</button>
             <button type="button" role="menuitem" data-accion="importar"><svg class="ic" aria-hidden="true"><use href="#i-subir"/></svg>Abrir una copia o un Excel</button>
             <button type="button" role="menuitem" data-accion="imprimir"><svg class="ic" aria-hidden="true"><use href="#i-imprimir"/></svg>Imprimir o guardar en PDF</button>
-            <hr>
-            <button type="button" role="menuitem" data-accion="ejemplos"><svg class="ic" aria-hidden="true"><use href="#i-reiniciar"/></svg>Volver a los ejemplos</button>
           </div>
         </div>
       </nav>
@@ -124,7 +126,7 @@
             </figure>
             <div class="pastel-lado">
               <h2 class="mini-titulo">El pastel del problema</h2>
-              <p class="mini-ayuda">Cada porción es un dolor. Lo blanco es lo que ya resuelven tus iniciativas; la línea punteada, lo que resolverían si todo se cumple.</p>
+              <p class="mini-ayuda">Cada porción es un dolor y su tamaño es el impacto del dolor. Lo blanco es lo que ya resuelven tus iniciativas; la línea punteada, lo que resolverían si todo se cumple.</p>
               <ol class="leyenda" id="leyenda"></ol>
             </div>
           </div>
@@ -170,7 +172,7 @@
         <summary><svg class="ic" aria-hidden="true"><use href="#i-ajustes"/></svg>Ajustes del semáforo y de las alertas<small>Aplican a todos los indicadores</small></summary>
         <div class="ajustes-cuerpo" id="ajustes-cuerpo"></div>
       </details>
-      <p class="pie-nota">Tus datos se guardan solo en este navegador. Para compartirlos usa <b>Más › Guardar una copia</b>, o llena la plantilla <b>Plantilla_Suficiencia.xlsx</b> e impórtala aquí. La calculadora usa exactamente las mismas fórmulas que esa plantilla.</p>
+      <p class="pie-nota">Tus datos se guardan solo en este navegador. Para compartirlos usa <b>Exportar Excel</b>: el archivo se puede editar y volver a abrir aquí con <b>Importar Excel</b>, igual que la plantilla <b>Plantilla_Suficiencia.xlsx</b>. La calculadora usa exactamente las mismas fórmulas que esa plantilla.</p>
     </div>
   </footer>
 
@@ -185,13 +187,13 @@
       </div>
       <ol class="ideas">
         <li class="idea"><svg class="idea-arte" data-demo="1" viewBox="0 0 360 360" aria-hidden="true"></svg><span class="paso-n">Idea 1</span><h3>El pastel es todo el problema</h3><p>Es la distancia entre tu valor de hoy y el mejor valor posible (el ideal).</p></li>
-        <li class="idea"><svg class="idea-arte" data-demo="2" viewBox="0 0 360 360" aria-hidden="true"></svg><span class="paso-n">Idea 2</span><h3>Cada porción es un dolor</h3><p>Su tamaño sale de los casos del análisis de datos. Un caso puede tener varios dolores.</p></li>
+        <li class="idea"><svg class="idea-arte" data-demo="2" viewBox="0 0 360 360" aria-hidden="true"></svg><span class="paso-n">Idea 2</span><h3>Cada porción es un dolor</h3><p>Su tamaño es el impacto del dolor y sale de los casos del análisis de datos. Un caso puede tener varios dolores.</p></li>
         <li class="idea"><svg class="idea-arte" data-demo="3" viewBox="0 0 360 360" aria-hidden="true"></svg><span class="paso-n">Idea 3</span><h3>Cada iniciativa se come una parte</h3><p>Si se retrasa, come menos. La segunda iniciativa solo come lo que la primera dejó.</p></li>
         <li class="idea"><svg class="idea-arte" data-demo="4" viewBox="0 0 360 360" aria-hidden="true"></svg><span class="paso-n">Idea 4</span><h3>El anillo es tu suficiencia</h3><p>Lo que comen tus iniciativas ÷ la brecha a la meta. Si da la vuelta completa (100 %), alcanza.</p></li>
       </ol>
       <p class="dlg-regla"><svg class="ic" aria-hidden="true"><use href="#i-ojo"/></svg><span><b>Una regla para no perderte:</b> lo oscuro es el resultado y solo se lee. Lo blanco es el taller: ahí escribes.</span></p>
       <details class="glosario">
-        <summary>Glosario (12 palabras)</summary>
+        <summary>Glosario (13 palabras)</summary>
         <dl>
           <dt>Hoy (ejecutado)</dt><dd>Valor real del indicador hoy.</dd>
           <dt>Meta 2027</dt><dd>Valor que debes alcanzar en 2027.</dd>
@@ -199,11 +201,12 @@
           <dt>Problema total (pastel)</dt><dd>Distancia entre hoy y el valor ideal.</dd>
           <dt>Brecha</dt><dd>Distancia entre hoy y la meta. Es lo que debes recuperar.</dd>
           <dt>Dolor</dt><dd>Una causa del problema, sacada del análisis de datos del indicador.</dd>
-          <dt>Prevalencia</dt><dd>% de casos que tienen ese dolor. La suma puede pasar de 100 % porque un caso puede tener varios dolores.</dd>
-          <dt>Parte del pastel</dt><dd>Lo que le toca a cada dolor del problema total (atribución). Siempre suma 100 %.</dd>
+          <dt>% dolor</dt><dd>% de casos que tienen ese dolor. La suma puede pasar de 100 % porque un caso puede tener varios dolores.</dd>
+          <dt>Impacto del dolor</dt><dd>Qué parte del problema total explica cada dolor: el tamaño de su porción del pastel. Siempre suma 100 %.</dd>
           <dt>Efectividad</dt><dd>% del dolor que la iniciativa resuelve si se hace completa. Lo defines tú, con evidencia.</dd>
           <dt>Ejecución</dt><dd>% de la iniciativa que de verdad estará listo en 2027 (retrasos o alcance parcial).</dd>
           <dt>Suficiencia</dt><dd>Puntos recuperados ÷ brecha. 100 % o más quiere decir que las iniciativas alcanzan.</dd>
+          <dt>Mueve el indicador</dt><dd>Cuántos puntos se mueve el indicador con tus iniciativas: suficiencia × brecha.</dd>
           <dt>Aporte</dt><dd>Cuánto baja la suficiencia si esa iniciativa falla.</dd>
         </dl>
       </details>
@@ -215,12 +218,40 @@
     </div>
   </dialog>
 
+  <dialog class="dlg dlg--chico" id="dlg-exportar" aria-labelledby="exp-titulo">
+    <form class="dlg-cuerpo" id="form-exportar" method="dialog">
+      <div class="dlg-cab">
+        <div>
+          <p class="cejilla cejilla--clara">Exportar a Excel</p>
+          <h2 id="exp-titulo">¿Qué indicadores van en el archivo?</h2>
+        </div>
+        <button class="btn-icono" type="button" data-accion="cerrar-dialogo" aria-label="Cerrar"><svg class="ic" aria-hidden="true"><use href="#i-cerrar"/></svg></button>
+      </div>
+      <ul class="exp-que">
+        <li><b>Resumen:</b> todos los indicadores lado a lado, con su semáforo.</li>
+        <li><b>Una hoja por indicador:</b> el resultado arriba y abajo los datos, dolores e iniciativas.</li>
+        <li><b>Ajustes y glosario</b>, para que cualquiera lo entienda.</li>
+      </ul>
+      <p class="exp-nota">Puedes cambiar los datos en Excel y volver a abrir el archivo aquí con <b>Importar Excel</b>.</p>
+      <div class="exp-todos">
+        <button class="btn-texto-claro" type="button" data-accion="exp-todos">Elegir todos</button>
+        <button class="btn-texto-claro" type="button" data-accion="exp-ninguno">Ninguno</button>
+      </div>
+      <ul class="exp-lista" id="exp-lista" aria-label="Indicadores para exportar"></ul>
+      <div class="dlg-pie">
+        <button class="btn" type="button" data-accion="cerrar-dialogo">Cancelar</button>
+        <button class="btn btn--rojo" type="submit" id="exp-ok"><svg class="ic" aria-hidden="true"><use href="#i-bajar"/></svg>Exportar</button>
+      </div>
+    </form>
+  </dialog>
+
   <div class="tip" id="tip" role="tooltip" hidden></div>
   <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
   <input type="file" id="archivo" accept=".xlsx,.xlsm,.xls,.json" hidden>
 
   <script src="assets/js/engine.js"></script>
   <script src="assets/js/ejemplos.js"></script>
+  <script src="assets/js/excel.js"></script>
   <script src="assets/js/app.js"></script>
 </body>
 </html>

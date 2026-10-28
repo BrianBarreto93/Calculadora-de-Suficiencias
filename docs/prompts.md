@@ -122,3 +122,27 @@ Las recomendaciones que venían de la fase 1:
 5. Importar el Excel al HTML para no perder lo que la gente ya llenó.
 
 El resultado y las decisiones de diseño están en [diseno.md](diseno.md).
+
+## Fase 3 · Mejoras del tablero
+
+### Pedido
+
+> Realiza las siguientes modificaciones al proyecto de suficiencia:
+>
+> 1. Cambia el nombre del html por suficiencia_cx.
+> 2. Modifica el html para que permita tanto exportar archivos en Excel como importar archivos de Excel con la data. Si se desea exportar, quiero que el exporte sea súper claro y entendible para el usuario.
+> 3. Añade un botón para crear un nuevo cálculo de suficiencia, donde el usuario defina todos los parámetros desde cero, y deja uno como ejemplo con info ya diligenciada.
+> 4. Añade animaciones a las gráficas del pastel, tanto de las tarjetas de los indicadores creados como de la gráfica del pastel, para que sea más llamativo pero manteniendo el mismo estilo.
+> 5. Dentro de la pregunta «¿Me alcanza para la meta de 2027?», abajo en las tarjetas de KPI, coloca cuántos puntos movió el indicador la suficiencia calculada.
+> 6. Cambia lo que diga «prevalencia» por «% dolor» y «parte del pastel» por «Impacto del dolor».
+> 7. Permite añadir más dolores e iniciativas, máximo 15.
+
+### Cómo se resolvió
+
+1. `index.html` pasó a llamarse `suficiencia_cx.html`.
+2. **Exportar Excel** arma un libro con Resumen, una hoja por indicador, Ajustes y Glosario, sin internet (`assets/js/excel.js`). **Importar Excel** lee ese archivo (aunque se haya editado) y la plantilla, también sin internet.
+3. Botón **Nuevo cálculo** (barra y riel) que crea un indicador vacío; queda un solo ejemplo lleno, marcado como "Ejemplo".
+4. Los pasteles se despliegan al entrar, pasan suavemente de un valor a otro al editar y la porción señalada se asoma; las tarjetas entran escalonadas.
+5. Tarjeta **Mueve el indicador**: puntos que se mueve el indicador con la suficiencia calculada (suficiencia × brecha).
+6. Los nombres nuevos se usan en el tablero, el Excel exportado y la plantilla de Excel.
+7. Hasta 15 dolores y 15 iniciativas en el tablero y en el Excel exportado (la plantilla mantiene 6 y 8).
