@@ -160,7 +160,7 @@
     var resumen = function (x) {
       return JSON.stringify([x.nombre, x.sentido, x.unidad, x.ejecutado, x.meta, x.ideal, x.totalCasos,
         x.dolores.map(function (d) { return [d.nombre, d.casos, d.atribucionManual, d.evidencia]; }),
-        x.iniciativas.map(function (y) { return [y.nombre, y.ejecucion, y.estado, y.responsable, y.fecha, y.evidencia, x.dolores.map(function (d) { return y.efectividad[d.id] === undefined ? null : y.efectividad[d.id]; })]; })]);
+        x.iniciativas.map(function (y) { return [y.nombre, y.ejecucion, y.responsable, y.fecha, y.evidencia, x.dolores.map(function (d) { return y.efectividad[d.id] === undefined ? null : y.efectividad[d.id]; })]; })]);
     };
     ok(resumen(a) === resumen(b), que + ': mismos datos, dolores e iniciativas');
   }
@@ -181,7 +181,7 @@
       ok(g && g.tipoSegmento === 'Transversal' && JSON.stringify(g.segmentos) === JSON.stringify(Motor.normalizarIndicador(grande).segmentos), 'el segmento y sus pesos vuelven del Excel → ' + JSON.stringify(g && g.segmentos));
       var c0 = inds.filter(function (x) { return x.nombre === ej[0].nombre; })[0];
       ok(c0 && c0.tipoSegmento === 'UMM' && c0.segmentos.length === 1 && c0.segmentos[0].nombre === 'Pospago', 'el segmento sin peso también vuelve');
-      ok(c0 && c0.iniciativas.map(function (x) { return x.estado; }).join() === ej[0].iniciativas.map(function (x) { return x.estado; }).join(), 'sin la columna Estado en el Excel, cada iniciativa conserva su estado');
+      ok(!/En riesgo/.test(JSON.stringify(leido.hojas)), 'el estado ya no cuenta: el Excel no tiene la etiqueta «En riesgo»');
       ok(inds.every(function (x) { return !x.ejemplo; }), 'lo importado ya no se marca como ejemplo');
     } catch (e) { out.push('EXCEPCION ' + e.message + ' | ' + e.stack); terminar(); return; }
     editarEnExcel();

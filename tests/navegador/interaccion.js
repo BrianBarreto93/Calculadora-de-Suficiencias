@@ -13,6 +13,7 @@
   function fila(tipo, id) { return $$('[data-' + tipo + ']').filter(function (e) { return e.getAttribute('data-' + tipo) === id; })[0]; }
   function heroe() { return $('.pastel-valor').textContent.replace(/\s/g, ''); }
   // Los números llevan espacios que no se parten (85 %): se comparan como espacios normales
+  function dt(kpi) { return texto($('dt', kpi)).replace(/\s*\?$/, ''); }
   function texto(el) { return el ? el.textContent.replace(/\s+/g, ' ').trim() : ''; }
   function titulo() { return $('#titulo-indicador').textContent; }
   function pctTxt(v) { return Math.round(v * 100) + '%'; }
@@ -27,16 +28,22 @@
       ok($$('#leyenda > li').length === 5, 'leyenda con 5 dolores');
       ok($$('#aportes > li').length === 5, 'ranking con 5 iniciativas');
       ok($('#aportes > li .ap-nombre').textContent === 'Resolución en el primer contacto', 'primera del ranking igual al Excel');
-      ok($$('#vigilar .vig').length === 4 && $('#vigilar-cuenta').textContent === '6 alertas', 'vigilar: 4 visibles de 6');
+      ok($$('#vigilar .vig').length === 4 && $('#vigilar-cuenta').textContent === '4 alertas', 'vigilar: 4 alertas → ' + $('#vigilar-cuenta').textContent);
+      ok(!/En riesgo|retrasada/.test($('#escenario').textContent), 'el estado ya no cuenta: sin «En riesgo» ni «está retrasada»');
 
       // Las 4 tarjetas de KPI, con los puntos que mueve el indicador
       var kpis = $$('#kpis .kpi');
       var r0 = Motor.calcular(ej[0]);
       ok(kpis.length === 4, '4 tarjetas de KPI');
-      ok(texto($('dt', kpis[0])) === 'Mueve el indicador' && texto($('.kpi-mov', kpis[0])) === '0,68 pp' && !!$('.kpi-mov .ic', kpis[0]),
+      ok(dt(kpis[0]) === 'Mueve el indicador' && texto($('.kpi-mov', kpis[0])) === '0,68 pp' && !!$('.kpi-mov .ic', kpis[0]),
         'KPI «Mueve el indicador» → ' + texto($('.kpi-mov', kpis[0])) + ' (motor: ' + r0.real.pp.toFixed(4) + ')');
       ok(texto($('.sub', kpis[0])) === 'el 85 % de la brecha de 0,80 pp', 'explica de dónde salen los puntos → ' + texto($('.sub', kpis[0])));
-      ok($$('#kpis dt').map(function (d) { return d.textContent; }).join('|') === 'Mueve el indicador|Así quedarías en 2027|Te faltaría|Si todo se cumple', 'orden de los KPI');
+      ok($$('#kpis .kpi').map(dt).join('|') === 'Mueve el indicador|Así quedarías en 2027|Te faltaría|Si todo se cumple', 'orden de los KPI');
+      // «¿Qué significa este número?»: cada resultado tiene su ayuda
+      ok($$('#kpis .ayuda').length === 4 && $$('#escenario .ayuda').length >= 6, 'cada resultado tiene su «?» de ayuda');
+      $('#kpis .ayuda').click();
+      ok(!$('#tip').hidden && /puntos se mueve el indicador/.test($('#tip').textContent), 'la ayuda explica el número con un ejemplo → ' + $('#tip').textContent);
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
       // Nombres nuevos: «% dolor» e «Impacto del dolor»
       var cab = $('.tabla-cab').textContent;
@@ -221,12 +228,16 @@
       ok(filas[0] === 'Hogar60%' + dosDec(h60) + 'pp' && filas[1] === 'PymeFijo40%' + dosDec(0.4 * r1.real.pp) + 'pp' && filas[2] === 'Sinasignar0%0,00pp' && filas[3] === 'Total100%' + total + 'pp',
         'tabla del resumen: segmento | peso | aporte, sin asignar y total → ' + filas.join(' | '));
       escribir(peso('Pyme Fijo'), '');
+      ok($('[data-accion="repartir-pesos"]').textContent === 'Repartir en partes iguales', 'hay un botón para repartir en partes iguales');
       ok(/Falta repartir 40/.test(texto($('#paso-1'))) && filasSeg()[1].indexOf('Nodefinido') > 0, 'dejar el peso vacío no pasa nada: vuelve a «No definido»');
       ok(heroe() === pctTxt(r1.real.suficiencia), 'los pesos no cambian la suficiencia → ' + heroe());
+      $('[data-accion="repartir-pesos"]').click();
+      ok(peso('Hogar').value === '50' && peso('Pyme Fijo').value === '50' && filasSeg()[2] === 'Sinasignar0%0,00pp' && !!$('#aviso [data-accion="deshacer"]'),
+        'repartir en partes iguales: 50 % y 50 %, y se puede deshacer → ' + filasSeg().join(' | '));
 
       $('[data-accion="sentido"][data-valor="baja"]').click();
       ok($('.pastel-valor').textContent === '✓', '"baja es mejor" deja la meta cumplida → ' + $('.pastel-valor').textContent);
-      ok($('#kpis dt').textContent === 'Mueve el indicador' && $$('#kpis .kpi').length === 4, 'con la meta cumplida siguen las 4 tarjetas');
+      ok(dt($('#kpis .kpi')) === 'Mueve el indicador' && $$('#kpis .kpi').length === 4, 'con la meta cumplida siguen las 4 tarjetas');
       $('[data-accion="sentido"][data-valor="sube"]').click();
       ok(heroe() === pctTxt(r1.real.suficiencia), 'volver a "sube es mejor" → ' + heroe());
 
@@ -280,6 +291,17 @@
   function paso5() {
     try {
       ok(guardado().calculos.length === 0 && /Eliminaste «Tablero renombrado»/.test($('#aviso').textContent), 'eliminado de Mis cálculos');
+      // Mis cálculos: semáforo de cada cálculo y duplicar
+      $('[aria-controls="menu-calculos"]').click();
+      $('[data-accion="guardar-calculo"]').click();
+      $('#preg-nombre').value = 'Base';
+      $$('#preg-botones button')[0].click();
+      $('[aria-controls="menu-calculos"]').click();
+      var item = $('#menu-calculos .calc-item');
+      ok(item && /^\d+ (alcanza|cerca|no alcanza)$/.test(texto($('.calc-semaforo', item))), 'cada cálculo guardado muestra su semáforo → ' + texto(item && $('.calc-semaforo', item)));
+      $('[data-accion="duplicar-calculo"]', item).click();
+      var nombres = guardado().calculos.map(function (c) { return c.nombre; }).sort().join('|');
+      ok(nombres === 'Base|Base (copia)' && /Duplicaste «Base»/.test($('#aviso').textContent), 'duplicar un cálculo → ' + nombres);
 
       // «Ver el ejemplo lleno»: el ejemplo no está en este tablero, así que se vuelve a agregar
       $('[data-accion="ver-ejemplo"]').click();
@@ -301,7 +323,7 @@
       var g = guardado();
       var ins = g && g.actual.indicadores.filter(function (x) { return x.nombre === 'Instalaciones en fecha (FTTH)'; })[0];
       ok(!!g && g.version === 3 && !!ins && JSON.stringify(g).indexOf('Churn prueba') < 0, 'se guarda en el navegador (versión 3)');
-      ok(ins && ins.tipoSegmento === 'Transversal' && JSON.stringify(ins.segmentos) === JSON.stringify([{ nombre: 'Hogar', peso: 0.6 }, { nombre: 'Pyme Fijo', peso: null }]), 'se guardan los segmentos y sus pesos → ' + JSON.stringify(ins && ins.segmentos));
+      ok(ins && ins.tipoSegmento === 'Transversal' && JSON.stringify(ins.segmentos) === JSON.stringify([{ nombre: 'Hogar', peso: 0.5 }, { nombre: 'Pyme Fijo', peso: 0.5 }]), 'se guardan los segmentos y sus pesos → ' + JSON.stringify(ins && ins.segmentos));
       terminar();
     }, 500);
   }

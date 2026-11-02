@@ -123,6 +123,22 @@ test('Respaldo .json: se limpian datos raros, ids repetidos y cálculos vacíos'
   assert.equal(Motor.normalizarEspacio({ version: 3 }), null);
 });
 
+test('Repartir en partes iguales (1/3 cada uno) suma 100 % y no deja un resto negativo', () => {
+  const s = Motor.repartirSegmentos({ tipoSegmento: 'Transversal', segmentos: [{ nombre: 'Hogar', peso: 1 / 3 }, { nombre: 'Pospago', peso: 1 / 3 }, { nombre: 'Pyme Fijo', peso: 1 / 3 }] }, 0.7);
+  assert.equal(s.chequeo, 'OK');
+  assert.equal(s.sinAsignar.pp, 0);
+  assert.ok(!Object.is(s.sinAsignar.pp, -0));
+});
+
+test('El estado de la iniciativa ya no cuenta: misma etiqueta y mismo resultado con cualquier estado', () => {
+  const base = crearEjemplos()[0];
+  const resultados = Motor.ESTADOS.map((e) => Motor.calcular(Object.assign({}, base, { iniciativas: base.iniciativas.map((x) => Object.assign({}, x, { estado: e })) })));
+  resultados.forEach((r) => {
+    assert.ok(r.iniciativas.every((x) => x.etiqueta !== 'EN RIESGO'));
+    assert.deepEqual(r, resultados[0]);
+  });
+});
+
 test('Sin límite fijo de indicadores', () => {
   const muchos = Array.from({ length: 80 }, (_, i) => ({ id: 'i' + i, nombre: 'Indicador ' + i }));
   assert.equal(Motor.normalizarDatos({ indicadores: muchos }).indicadores.length, 80);

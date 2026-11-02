@@ -13,8 +13,8 @@
   // La plantilla de Excel trae espacio para 6 dolores y 8 iniciativas; el tablero y su exportación, para 15.
   var MAX_DOLORES = 15;
   var MAX_INICIATIVAS = 15;
+  // El estado se sigue leyendo de la plantilla y de los archivos, pero ya no cambia ningún resultado
   var ESTADOS = ['En plan', 'En riesgo', 'Retrasada'];
-  var ESTADOS_RIESGO = ['Retrasada', 'En riesgo'];
   // Segmentos por unidad de negocio. Un indicador Transversal puede marcar segmentos de las dos.
   var SEGMENTOS = { UMM: ['Hogar', 'Pospago', 'Prepago'], UMC: ['Pyme Fijo', 'Pyme Móvil'] };
   var TIPOS_SEGMENTO = ['UMM', 'UMC', 'Transversal'];
@@ -141,7 +141,8 @@
       var etiqueta = '';
       if (!vacio(ini.nombre)) {
         if (n(ini.ejecucion) === 0 || aportePct < p.umbralReemplazar) etiqueta = 'REEMPLAZAR';
-        else etiqueta = ESTADOS_RIESGO.indexOf(ini.estado) >= 0 ? 'EN RIESGO' : 'APORTA';
+        // Desde el 2 de nov el estado (En plan / En riesgo / Retrasada) ya no cuenta: el retraso se expresa con la ejecución
+        else etiqueta = 'APORTA';
       }
       var revision = '';
       if (!vacio(ini.nombre)) {
@@ -202,12 +203,15 @@
     var conPesos = filas.some(function (f) { return f.peso !== null; });
     var pasa = sumaPesos > 1 + 1e-9;
     if (pasa) filas.forEach(function (f) { f.pp = null; });
+    var resto = total - suma(filas.map(function (f) { return f.pp || 0; }));
+    // Pesos como 1/3 + 1/3 + 1/3 dejan un resto de 1e-17: se muestra 0, no «-0,00»
+    if (Math.abs(resto) < 1e-12) resto = 0;
     return {
       filas: filas,
       total: total,
       conPesos: conPesos,
       sumaPesos: sumaPesos,
-      sinAsignar: { peso: pasa ? 0 : Math.max(0, 1 - sumaPesos), pp: pasa ? null : total - suma(filas.map(function (f) { return f.pp || 0; })) },
+      sinAsignar: { peso: pasa ? 0 : Math.max(0, 1 - sumaPesos), pp: pasa ? null : resto },
       chequeo: !filas.length ? 'SIN SEGMENTO' : (pasa ? 'PASA DE 100' : (conPesos && sumaPesos < 1 - 1e-9 ? 'FALTA REPARTIR' : 'OK'))
     };
   }

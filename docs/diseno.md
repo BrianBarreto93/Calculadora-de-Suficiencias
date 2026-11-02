@@ -17,8 +17,10 @@ Una sola vista con dos zonas y una regla que se explica en una frase: **lo oscur
 
 - **+ Agregar indicador** (última tarjeta del riel) suma un indicador vacío al mismo tablero y lleva al paso 1. No borra nada y no tiene límite fijo.
 - **Nuevo cálculo** (botón rojo) abre un tablero nuevo con un indicador vacío. Si el tablero actual tiene cambios sin guardar, primero pregunta «¿Guardar los cambios del tablero actual?» (Guardar / No guardar / Cancelar). Si eliges No guardar, el aviso ofrece **Deshacer**. Reemplaza la decisión del 28-oct de que Nuevo cálculo borrara todo.
-- **Mis cálculos** lista los cálculos guardados (nombre editable y fecha): se abren, se renombran y se eliminan (con confirmación). También tiene **Guardar**, **Descargar respaldo** y **Cargar respaldo**.
+- **Mis cálculos** lista los cálculos guardados (nombre editable, fecha y semáforo: cuántos indicadores alcanzan, están cerca o no alcanzan): se abren, se renombran, se duplican y se eliminan (con confirmación). También tiene **Guardar**, **Descargar respaldo** y **Cargar respaldo**.
 - El tablero que se ve se guarda solo a cada cambio; guardar en Mis cálculos es una copia con nombre para volver a abrirla.
+- Si hay cálculos guardados y hace más de 7 días (o nunca) que no se descarga un respaldo, al abrir la página un aviso ofrece **Descargar respaldo** (la fecha queda en `suficiencia.respaldo.v1`).
+- Cada resultado (los 4 KPI, el número del centro, Quién aporta más y Aporte por segmento) tiene un **?** con «qué significa este número» y un ejemplo.
 - Cada tarjeta del riel tiene una **papelera** para eliminar ese indicador (aparece al pasar el mouse o con el teclado, y siempre en pantallas táctiles). También se puede deshacer.
 - Al abrir por primera vez hay **un solo ejemplo lleno** (Churn mensual pospago) marcado como "Ejemplo". Un cálculo vacío ofrece verlo, y el menú **Más › Ver el ejemplo lleno** lo vuelve a traer si no está (por ejemplo, en un cálculo nuevo), sin tocar los cálculos propios.
 - Cuando le pones tu propio nombre al ejemplo, deja de ser ejemplo: pasa a ser tu cálculo.
@@ -27,7 +29,7 @@ Una sola vista con dos zonas y una regla que se explica en una frase: **lo oscur
 
 - Obligatorio en el paso 1: primero la unidad (**UMM**, **UMC** o **Transversal**) y luego los segmentos. UMM: Hogar, Pospago, Prepago. UMC: Pyme Fijo, Pyme Móvil. Transversal deja marcar segmentos de las dos. Si falta, el paso 1 no queda listo y se pide con un mensaje simple.
 - **Peso del segmento (%)**: opcional y solo en indicadores Transversales. Vacío = no pasa nada. Aporte en pp = peso × lo que mueve el indicador (lo calcula la herramienta). Cada peso va de 0 a 100 y la suma no puede pasar de 100 % (se rechaza con un mensaje); si suma menos, un aviso amable dice cuánto falta repartir.
-- Los pesos no cambian la suficiencia: solo reparten los puntos que mueve el indicador. La herramienta nunca inventa ni reparte pesos.
+- Los pesos no cambian la suficiencia: solo reparten los puntos que mueve el indicador. La herramienta nunca inventa ni reparte pesos por su cuenta: el botón **Repartir en partes iguales** lo hace solo si el usuario lo pulsa (se puede deshacer).
 
 ## El pastel
 
@@ -62,7 +64,7 @@ Reglas: con "reducir movimiento" activado en el sistema no hay animaciones; cada
 | Glosario | Las palabras, las etiquetas y cómo volver a abrir el archivo en la calculadora |
 
 - Celdas **azules** = datos (se pueden editar, con listas y validaciones); **grises** = resultados.
-- Los dolores van en columnas y son las mismas columnas en el paso 2 y en la matriz del paso 3. El paso 3 ya no tiene la columna Estado (tampoco en pantalla); al importar, cada iniciativa conserva el estado que tenía.
+- Los dolores van en columnas y son las mismas columnas en el paso 2 y en la matriz del paso 3. El paso 3 ya no tiene la columna Estado (tampoco en pantalla) y el estado ya no cuenta para nada: no hay etiqueta «En riesgo» ni alerta «está retrasada». Los retrasos se expresan con el % de ejecución. Es la única diferencia a propósito con la plantilla de Excel, que todavía usa el Estado.
 - Nombres de hoja únicos, de máximo 31 caracteres y sin `[ ] : * ? / \ .`
 - El importador busca cada dato **por su título**, no por su celda: el archivo sigue funcionando si alguien inserta filas o columnas. Acepta 45 o 45 % y fechas escritas como 31/03/2027.
 - La primera celda de cada hoja de indicador (`SUFICIENCIA 2027 · HOJA DE INDICADOR`) la identifica al importar. Si no aparece, se intenta leer como la plantilla.

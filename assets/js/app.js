@@ -14,6 +14,7 @@
   var CLAVE_DATOS = 'suficiencia.espacio.v3';
   var CLAVE_ANTERIOR = 'suficiencia.datos.v1';
   var CLAVE_INTRO = 'suficiencia.intro.v1';
+  var CLAVE_RESPALDO = 'suficiencia.respaldo.v1';   // fecha del último respaldo descargado (para el recordatorio semanal)
   var SHEETJS = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
   var movimientoReducido = window.matchMedia('(prefers-reduced-motion: reduce)');
 
@@ -26,7 +27,6 @@
   };
   var ETIQUETA = {
     'APORTA': { txt: 'Aporta', tono: 'ok', icono: 'check', que: 'Va bien. Seguimiento normal.' },
-    'EN RIESGO': { txt: 'En riesgo', tono: 'alerta', icono: 'reloj', que: 'Aporta, pero está retrasada o en riesgo. Si falla, la suficiencia cae: dale seguimiento cercano.' },
     'REEMPLAZAR': { txt: 'Reemplazar', tono: 'critico', icono: 'cambiar', que: 'Casi no aporta o su ejecución es 0 %. Cámbiala o rediséñala.' }
   };
   var ALERTA_DOLOR = {
@@ -46,7 +46,14 @@
     resuelto: 'Qué parte del dolor se comen tus iniciativas con su ejecución esperada. La rayita marca lo que se comerían si todo se cumple.',
     efectividad: 'Qué % del dolor resuelve la iniciativa si se hace completa. Vacío = 0 %.',
     ejecucion: 'Qué % de la iniciativa estará listo de verdad en 2027. 100 % = a tiempo y completa.',
-    aporte: 'Puntos que se pierden si la iniciativa falla, y cómo quedaría la suficiencia sin ella.'
+    aporte: 'Puntos que se pierden si la iniciativa falla, y cómo quedaría la suficiencia sin ella.',
+    // «¿Qué significa este número?» junto a cada resultado
+    suficiencia: 'El número del centro es la suficiencia: qué parte de la brecha cubren tus iniciativas. 100 % o más = alcanza. Ej.: 85 % = te falta cubrir el 15 % de la brecha.',
+    mueve: 'Cuántos puntos se mueve el indicador con tus iniciativas y su ejecución esperada. Ej.: churn de 2,80 % que mueve 0,68 pp → queda en 2,12 %.',
+    quedarias: 'El valor del indicador en 2027 si todo sale como esperas: hoy más (o menos) lo que mueve. Compáralo con la meta.',
+    faltaria: 'Puntos de la brecha que tus iniciativas no alcanzan a cubrir. «Nada» = llegas a la meta.',
+    todoCumple: 'La suficiencia si todas las iniciativas se ejecutan al 100 %. Si aquí alcanzas y con la ejecución esperada no, lo que falla son los retrasos.',
+    aporteSegmento: 'Cuántos de los puntos que mueve el indicador le tocan a cada segmento según su peso. Ej.: mueve 3 pp y Hogar pesa 60 % → Hogar aporta 1,8 pp.'
   };
 
   // ---------------------------------------------------------------- utilidades
@@ -661,6 +668,7 @@
     if (!r.ranking.length) return 'Agrega iniciativas en el paso 3';
     return 'el ' + pct(r.real.suficiencia) + ' de la brecha de ' + puntos(r.brecha, ind);
   }
+  var AYUDA_KPI = { 'Mueve el indicador': 'mueve', 'Así quedarías en 2027': 'quedarias', 'Te faltaría': 'faltaria', 'Si todo se cumple': 'todoCumple' };
   function pintarKpis(ind, r) {
     var tono = (SEMAFORO[r.real.semaforo] || SEMAFORO['SIN DATOS']).tono;
     var mueve = r.real.semaforo === 'SIN DATOS' ? '—'
@@ -680,7 +688,8 @@
       ];
     }
     fijar(D.kpis, items.map(function (it, k) {
-      return h('div', { class: 'kpi' + (k === 0 ? ' kpi--mueve tono-' + tono : '') }, h('dt', null, it[0]), h('dd', null, it[1], it[2] ? h('span', { class: 'sub' }, it[2]) : null));
+      var ayuda = AYUDA_KPI[it[0]];
+      return h('div', { class: 'kpi' + (k === 0 ? ' kpi--mueve tono-' + tono : '') }, h('dt', null, it[0], ayuda ? botonAyuda(ayuda, it[0]) : null), h('dd', null, it[1], it[2] ? h('span', { class: 'sub' }, it[2]) : null));
     }));
   }
 
@@ -742,7 +751,6 @@
   function alertas(ind, r) {
     var lista = [];
     var nom = function (t) { return h('strong', null, '«' + t + '»'); };
-    var suf = r.real.suficiencia;
     if (vacio(ind.ejecutado) || vacio(ind.meta) || !ind.sentido) {
       lista.push({ tono: 'neutro', icono: 'info', texto: ['Completa el ', h('strong', null, 'paso 1'), ': hoy, meta 2027 y si es mejor que suba o que baje.'], ir: { tipo: 'paso', id: '1' } });
       return lista;
@@ -759,13 +767,6 @@
       lista.push({ tono: 'critico', icono: 'triangulo', dolor: d.id, texto: [nom(d.nombre), ' explica el ' + pct(dr.atribucion) + ' del problema y solo se resuelve el ' + pct(dr.resueltoReal) + '. Falta una iniciativa para este dolor.'], ir: { tipo: 'dolor', id: d.id } });
     });
     if (!r.ranking.length && r.chequeoAtribucion !== 'SIN DOLORES') lista.push({ tono: 'neutro', icono: 'info', texto: ['Agrega tus iniciativas en el ', h('strong', null, 'paso 3'), ' para saber si te alcanza.'], ir: { tipo: 'paso', id: '3' } });
-    r.ranking.forEach(function (id) {
-      var x = buscar(r.iniciativas, id);
-      var ini = buscar(ind.iniciativas, id);
-      if (x.etiqueta === 'EN RIESGO') {
-        lista.push({ tono: 'alerta', icono: 'reloj', ini: id, texto: [nom(ini.nombre), ' está ' + (ini.estado === 'Retrasada' ? 'retrasada' : 'en riesgo') + '. Si falla, la suficiencia baja de ' + pct(suf) + ' a ' + pct(x.suficienciaSin) + '.'], ir: { tipo: 'ini', id: id } });
-      }
-    });
     r.ranking.forEach(function (id) {
       var x = buscar(r.iniciativas, id);
       var ini = buscar(ind.iniciativas, id);
@@ -949,6 +950,8 @@
           return fila;
         }));
     }));
+    // Solo si el usuario lo pide: la herramienta nunca reparte pesos por su cuenta
+    if (trans && ind.segmentos.length > 1) refs.segLista.appendChild(h('button', { class: 'btn btn-repartir', type: 'button', data: { accion: 'repartir-pesos' } }, 'Repartir en partes iguales'));
     if (trans) refs.segLista.appendChild(h('p', { class: 'pista seg-ayuda' }, 'El peso es opcional. Aporte = peso × lo que mueve el indicador. Ej.: si el indicador mueve 3 pp y Hogar pesa 60 %, Hogar aporta 1,8 pp.'));
     var vuelve = foco && $$('input[data-campo="segmento"]', refs.segLista).filter(function (x) { return x.value === foco; })[0];
     if (vuelve) vuelve.focus();
@@ -1359,6 +1362,19 @@
     pintarSegmentos(ind);
     recalcular(false);
   }
+  // «Repartir en partes iguales»: 100 % ÷ número de segmentos marcados
+  function repartirIguales() {
+    var ind = actual();
+    var n = ind.segmentos.length;
+    if (n < 2 || ind.tipoSegmento !== 'Transversal') return;
+    var antes = foto();
+    var habia = ind.segmentos.some(function (s) { return s.peso !== null; });
+    ind.segmentos.forEach(function (s) { s.peso = 1 / n; });
+    pintarSegmentos(ind);
+    recalcular(false);
+    var txt = 'Repartiste el 100 % en partes iguales: ' + pctLibre(1 / n) + ' para cada segmento.';
+    if (habia) conDeshacer(txt, antes); else avisar(txt);
+  }
   // El peso es opcional (vacío = sin peso). No se acepta si la suma de los pesos pasa de 100 %.
   // Mientras se escribe solo se revisa; se guarda al confirmar (change), para no guardar números a medio escribir.
   function cambiarPeso(t, aplicar) {
@@ -1497,6 +1513,20 @@
     c.nombre = nombre;
     if (guardar(true)) avisar('Renombraste el cálculo: «' + nombre + '».');
   }
+  // Semáforo de un cálculo guardado: cuántos indicadores alcanzan, están cerca o no alcanzan (sin abrirlo)
+  function semaforoDe(datos) {
+    var cuenta = {};
+    datos.indicadores.forEach(function (ind) { var s = Motor.calcular(ind, datos.params).real.semaforo; cuenta[s] = (cuenta[s] || 0) + 1; });
+    return Object.keys(SEMAFORO).filter(function (s) { return cuenta[s]; }).map(function (s) {
+      return chip({ txt: cuenta[s] + ' ' + SEMAFORO[s].txt.toLowerCase(), tono: SEMAFORO[s].tono, icono: SEMAFORO[s].icono }, true);
+    });
+  }
+  function duplicarCalculo(id) {
+    var c = calculoDe(id);
+    if (!c) return;
+    calculos.push({ id: Motor.nuevoId('calc-'), nombre: (c.nombre + ' (copia)').slice(0, 80), fecha: new Date().toISOString(), datos: JSON.parse(JSON.stringify(c.datos)) });
+    if (guardar(true)) avisar('Duplicaste «' + c.nombre + '». La copia está en Mis cálculos.');
+  }
   function pintarCalculos() {
     var c = calculoDe(estado.calculoId);
     var cambios = hayCambios();
@@ -1513,8 +1543,10 @@
           h('label', { class: 'sr', for: id }, 'Nombre del cálculo'),
           h('input', { class: 'calc-nombre', id: id, type: 'text', maxlength: 80, autocomplete: 'off', value: x.nombre, data: { calculo: x.id } }),
           h('small', null, (x.fecha && !isNaN(fecha) ? 'Guardado el ' + fechaLarga(fecha) : 'Sin fecha') + ' · ' + x.datos.indicadores.length + (x.datos.indicadores.length === 1 ? ' indicador' : ' indicadores')),
+          h('span', { class: 'calc-semaforo' }, semaforoDe(x.datos)),
           h('div', { class: 'calc-botones' },
             x.id === estado.calculoId ? h('span', { class: 'calc-abierto' }, 'Abierto') : h('button', { class: 'btn-chico-claro', type: 'button', data: { accion: 'abrir-calculo', id: x.id } }, 'Abrir'),
+            h('button', { class: 'btn-icono', type: 'button', 'aria-label': 'Duplicar «' + x.nombre + '»', title: 'Duplicar', data: { accion: 'duplicar-calculo', id: x.id } }, icono('copiar')),
             h('button', { class: 'btn-icono peligro', type: 'button', 'aria-label': 'Eliminar «' + x.nombre + '»', title: 'Eliminar', data: { accion: 'eliminar-calculo', id: x.id } }, icono('borrar'))));
       })) : h('p', { class: 'calc-vacio' }, 'Aún no tienes cálculos guardados. Pulsa «Guardar» o, al empezar un «Nuevo cálculo», elige guardar el actual.'),
       h('hr'),
@@ -1649,10 +1681,11 @@
   }
 
   function conDeshacer(texto, antes, ms) { deshacer = antes; avisar(texto, 'Deshacer', ms); }
-  function avisar(texto, boton, ms) {
+  // accion: lo que hace el botón del aviso (por defecto, Deshacer)
+  function avisar(texto, boton, ms, accion) {
     clearTimeout(tAviso);
-    if (!boton) deshacer = null;
-    fijar(D.aviso, h('span', null, texto), boton ? h('button', { type: 'button', data: { accion: 'deshacer' } }, boton) : null);
+    if (!boton || accion) deshacer = null;
+    fijar(D.aviso, h('span', null, texto), boton ? h('button', { type: 'button', data: { accion: accion || 'deshacer' } }, boton) : null);
     D.aviso.classList.add('ver');
     tAviso = setTimeout(function () { D.aviso.classList.remove('ver'); deshacer = null; }, ms || (boton ? 8000 : 4500));
   }
@@ -1780,6 +1813,7 @@
   function descargarRespaldo() {
     var datos = Object.assign({ app: 'Suficiencia 2027', tipo: 'respaldo', exportado: new Date().toISOString() }, espacio());
     descargar(new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' }), 'suficiencia-respaldo-' + fechaISO(new Date()) + '.json');
+    try { window.localStorage.setItem(CLAVE_RESPALDO, datos.exportado); } catch (e) { /* sin almacenamiento: el recordatorio vuelve a salir */ }
     avisar('Descargaste el respaldo: el tablero actual y ' + calculos.length + (calculos.length === 1 ? ' cálculo guardado' : ' cálculos guardados') + '. Guárdalo en una carpeta segura.');
   }
 
@@ -2483,8 +2517,6 @@
       }
     }
     var listo = Motor.normalizarIndicador(ind);
-    // El Excel exportado ya no trae la columna Estado: al importar se conserva el que tenía cada iniciativa
-    if (colDe.estado === undefined) listo.sinEstado = true;
     if (fila(paso[1], fin1, 'tipo de segmento') < 0) listo.sinSegmento = true;
     return listo;
   }
@@ -2516,15 +2548,8 @@
     inds.forEach(function (ind) {
       var clave = ind.nombre.trim().toLowerCase();
       var existente = estado.indicadores.filter(function (x) { return !usados[x.id] && x.nombre.trim().toLowerCase() === clave; })[0];
-      if (existente && ind.sinEstado) {
-        ind.iniciativas.forEach(function (x) {
-          var antes = existente.iniciativas.filter(function (y) { return y.nombre === x.nombre; })[0];
-          if (antes) x.estado = antes.estado;
-        });
-      }
       // Un Excel exportado antes de existir el segmento no trae esas filas: se conserva el que había
       if (existente && ind.sinSegmento) { ind.tipoSegmento = existente.tipoSegmento; ind.segmentos = existente.segmentos; }
-      delete ind.sinEstado;
       delete ind.sinSegmento;
       if (existente) { ind.id = existente.id; estado.indicadores[estado.indicadores.indexOf(existente)] = ind; actualizados++; }
       else { ind.id = Motor.nuevoId('ind-'); estado.indicadores.push(ind); nuevos++; }
@@ -2666,6 +2691,8 @@
       case 'guardar-calculo': guardarDesdeMenu(); break;
       case 'abrir-calculo': abrirCalculo(b.dataset.id); break;
       case 'eliminar-calculo': eliminarCalculo(b.dataset.id); break;
+      case 'duplicar-calculo': duplicarCalculo(b.dataset.id); break;
+      case 'repartir-pesos': repartirIguales(); break;
       case 'descargar-respaldo': descargarRespaldo(); break;
       case 'cargar-respaldo': D.archivo.accept = '.json'; D.archivo.value = ''; D.archivo.click(); break;
       case 'tipo-segmento': cambiarTipoSegmento(b.dataset.valor); break;
@@ -2792,4 +2819,16 @@
   pintarTodo(true);
   revisarResumen();
   if (sinAlmacen) avisar('Este navegador no deja guardar datos: lo que hagas se pierde al cerrar. Usa «Descargar respaldo» en Mis cálculos para no perderlo.', null, 10000);
+  else recordarRespaldo();
+
+  // Si tienes cálculos guardados y hace más de 7 días (o nunca) que no descargas un respaldo, se recuerda al abrir
+  function recordarRespaldo() {
+    if (!calculos.length) return;
+    var ultimo = null;
+    try { ultimo = window.localStorage.getItem(CLAVE_RESPALDO); } catch (e) { return; }
+    var dias = ultimo ? (Date.now() - new Date(ultimo).getTime()) / 86400000 : Infinity;
+    if (dias < 7) return;
+    avisar(ultimo ? 'Hace más de una semana que no descargas un respaldo de tus cálculos.' : 'Aún no tienes un respaldo de tus cálculos: si se borra el navegador, se pierden.',
+      'Descargar respaldo', 15000, 'descargar-respaldo');
+  }
 })();

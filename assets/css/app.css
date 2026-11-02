@@ -155,7 +155,8 @@ ol, ul { padding: 0; list-style: none; }
 .calc-nombre:hover { background: var(--hoja-2); }
 .calc-nombre:focus { outline: none; background: #fff; border-color: var(--rojo); }
 .calc-item small { grid-column: 1; padding: 0 8px; font-size: 12px; color: var(--tinta-3); }
-.calc-botones { grid-column: 2; grid-row: 1 / span 2; display: flex; align-items: center; gap: 4px; }
+.calc-botones { grid-column: 2; grid-row: 1 / span 3; display: flex; align-items: center; gap: 2px; }
+.calc-semaforo { grid-column: 1; display: flex; flex-wrap: wrap; gap: 4px; padding: 4px 8px 2px; }
 .menu .calc-botones button { width: auto; padding: 0; }
 .menu .calc-botones .btn-chico-claro { height: 32px; padding: 0 14px; border: 1px solid var(--linea); border-radius: 999px; font-weight: 600; font-size: 13px; }
 .menu .calc-botones .btn-icono { width: 34px; height: 34px; justify-content: center; }
@@ -291,7 +292,12 @@ ol, ul { padding: 0; list-style: none; }
 .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 26px; border-top: 1px solid var(--noche-linea); }
 .kpi { padding: 14px 12px 0 0; min-width: 0; }
 .kpi + .kpi { padding-left: 14px; border-left: 1px solid var(--noche-linea); }
-.kpi dt { font-size: 12.5px; line-height: 1.3; color: var(--tiza-3); }
+.kpi dt { display: flex; align-items: center; gap: 6px; font-size: 12.5px; line-height: 1.3; color: var(--tiza-3); }
+/* «¿qué significa este número?» junto a los resultados */
+.titulo-ayuda { display: flex; align-items: center; gap: 8px; }
+.panel-cab .ayuda { align-self: center; margin-right: auto; }
+.oscuro .ayuda { background: transparent; border-color: rgba(255, 255, 255, .28); color: var(--tiza-2); }
+.oscuro .ayuda:hover, .oscuro .ayuda:focus-visible { border-color: #fff; color: #fff; }
 .kpi dd { margin-top: 6px; font-size: clamp(19px, 4.3cqi, 27px); font-weight: 650; line-height: 1.1; letter-spacing: -.015em; color: #fff; overflow-wrap: anywhere; }
 .kpi .sub { display: block; margin-top: 5px; font-size: 12.5px; font-weight: 400; line-height: 1.35; letter-spacing: 0; color: var(--tiza-3); }
 .kpi-mov { display: inline-flex; align-items: center; gap: .12em; }
@@ -443,6 +449,12 @@ ol, ul { padding: 0; list-style: none; }
 .oscuro .chip--neutro { --chip-fondo: rgba(255, 255, 255, .07); --chip-borde: var(--noche-linea); --chip-icono: var(--tiza-3); }
 .chip--chico { height: 22px; padding: 0 8px 0 6px; font-size: 11.5px; gap: 4px; }
 .chip--chico .ic { width: 12px; height: 12px; }
+/* El menú Mis cálculos es blanco aunque vive en la barra oscura: sus chips usan los colores claros */
+.menu .chip { color: var(--tinta); }
+.menu .chip--ok { --chip-fondo: #E8F6E8; --chip-borde: #C8E9C8; --chip-icono: var(--ok-tinta); }
+.menu .chip--alerta { --chip-fondo: #FEF4DC; --chip-borde: #F6DDA0; --chip-icono: var(--alerta-tinta); }
+.menu .chip--critico { --chip-fondo: #FCE9E7; --chip-borde: #F4C3BE; --chip-icono: var(--rojo); }
+.menu .chip--neutro { --chip-fondo: #F1F1F1; --chip-borde: #E2E2E2; --chip-icono: var(--tinta-3); }
 
 /* ------------------------------------------------------------------ taller (edición) */
 .taller { position: relative; z-index: 1; margin-top: -28px; padding: 44px 0 56px; background: var(--papel); border-radius: 28px 28px 0 0; }
@@ -580,6 +592,7 @@ select.entrada { padding-right: 30px; appearance: none; -webkit-appearance: none
 .seg-peso .entrada { height: 38px; font-size: 15px; background: #fff; }
 .seg-aporte { font-size: 12.5px; font-weight: 600; color: var(--tinta); }
 .seg-ayuda { margin-top: 2px; }
+.btn-repartir { justify-self: start; height: 36px; font-size: 13.5px; }
 
 /* barra de la brecha (bullet) */
 .bala { display: grid; gap: 6px; padding: 18px 18px 14px; border-radius: 16px; background: var(--hoja-2); border: 1px solid var(--linea-suave); }
@@ -864,7 +877,7 @@ select.entrada { padding-right: 30px; appearance: none; -webkit-appearance: none
 }
 @media print {
   body { background: #fff; }
-  .barra, .riel, .intro, .btn-agregar, .i-mas, .d-mas, .titulo-fila .btn-redondo, .vig .btn-chico, .pie .ajustes, .aviso, .tip, .saltar { display: none !important; }
+  .barra, .riel, .intro, .ayuda, .btn-repartir, .btn-agregar, .i-mas, .d-mas, .titulo-fila .btn-redondo, .vig .btn-chico, .pie .ajustes, .aviso, .tip, .saltar { display: none !important; }
   .escenario { background: #fff; color: #000; }
   .escenario::before, .pastel::before { display: none; }
   .escenario .titulo, .escenario .mini-titulo, .escenario .kpi dd, .escenario .frase strong, .escenario .pastel-valor,

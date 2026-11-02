@@ -1,5 +1,7 @@
 // Comprueba que el motor web da exactamente lo mismo que Plantilla_Suficiencia.xlsx.
 // Los valores esperados se leyeron del Excel recalculado (hojas IND01_Churn e IND02_Instalaciones).
+// Única diferencia a propósito: desde el 2 de nov el tablero ya no usa el Estado, así que donde la plantilla
+// dice EN RIESGO el tablero dice APORTA (la suficiencia y todo lo demás siguen iguales).
 // Uso: node --test tests/paridad_excel.test.js
 'use strict';
 const test = require('node:test');
@@ -25,7 +27,7 @@ const EXCEL = {
     aporte: [0.1727169230769231, 0.14638615384615383, 0.11630769230769233, 0.19626923076923081, 0.0079476923076923223],
     aportePct: [0.21589615384615393, 0.18298269230769232, 0.14538461538461545, 0.24533653846153855, 0.0099346153846154046],
     sufSin: [0.63841346153846168, 0.67132692307692321, 0.70892500000000014, 0.608973076923077, 0.84437500000000021],
-    etiquetas: ['EN RIESGO', 'APORTA', 'EN RIESGO', 'APORTA', 'REEMPLAZAR'],
+    etiquetas: ['APORTA', 'APORTA', 'APORTA', 'APORTA', 'REEMPLAZAR'],
     revision: ['OK', 'OK', 'OK', 'OK', 'SIN RESPALDO'],
     ranking: ['Resolución en el primer contacto', 'Nuevo portafolio de planes competitivos', 'Ofertas de retención con modelo predictivo', 'Densificación de red en zonas críticas', 'Campaña de imagen de marca en redes']
   },
@@ -46,7 +48,7 @@ const EXCEL = {
     aporte: [3.0927272727272754, 3.5787272727272761, 2.9569090909090914, 1.865454545454547],
     aportePct: [0.30927272727272753, 0.35787272727272762, 0.29569090909090912, 0.18654545454545471],
     sufSin: [0.91423636363636374, 0.86563636363636365, 0.9278181818181821, 1.0369636363636365],
-    etiquetas: ['APORTA', 'EN RIESGO', 'APORTA', 'APORTA'],
+    etiquetas: ['APORTA', 'APORTA', 'APORTA', 'APORTA'],
     revision: ['OK', 'OK', 'OK', 'OK'],
     ranking: ['Contratación de técnicos tercerizados', 'Agendamiento con confirmación por WhatsApp', 'Reposición automática de inventario', 'Validación de factibilidad en el punto de venta']
   }

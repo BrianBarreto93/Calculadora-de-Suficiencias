@@ -90,6 +90,7 @@
   setTimeout(function () {
     pasos([
       function () {
+        ok(/respaldo/.test(aviso()) && !!$('#aviso [data-accion="descargar-respaldo"]'), 'con cálculos guardados y sin respaldo, al abrir recuerda descargarlo → ' + aviso());
         ok(titulo() === 'Churn mensual pospago' && $$('.tarjeta[data-id]').length === 2, 'al volver se ve lo mismo: 2 indicadores y el elegido');
         tarjeta('Persistente').click();
         ok(titulo() === 'Persistente' && $('#paso-1 input[data-campo="meta"]').value === '5', 'el indicador conserva lo último que se escribió');
@@ -104,6 +105,7 @@
       function () {
         var d = descargas.filter(function (x) { return x.nombre && /\.json$/.test(x.nombre); })[0];
         ok(d && /^suficiencia-respaldo-\d{4}-\d{2}-\d{2}\.json$/.test(d.nombre), 'descargar respaldo → ' + (d && d.nombre));
+        ok(!!localStorage.getItem('suficiencia.respaldo.v1'), 'recuerda cuándo se descargó (el aviso vuelve en 7 días)');
         d.blob.text().then(function (t) { respaldo = t; });
         return function () { return respaldo !== null; };
       },
