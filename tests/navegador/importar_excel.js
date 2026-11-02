@@ -31,7 +31,7 @@
         setTimeout(function () {
           try {
             ok(aviso.indexOf('Importaste 1 indicador nuevo y 1 actualizado') >= 0, 'aviso → ' + aviso.replace('Deshacer', '').trim());
-            var datos = JSON.parse(localStorage.getItem('suficiencia.datos.v1') || '{"indicadores":[]}');
+            var datos = JSON.parse(localStorage.getItem('suficiencia.espacio.v3') || '{"actual":{"indicadores":[]}}').actual;
             var ej = SuficienciaEjemplos();
             ok(datos.indicadores.length === 2, 'quedan 2 indicadores (1 actualizado + 1 nuevo) → ' + datos.indicadores.length);
             ej.forEach(function (e) {

@@ -20,6 +20,8 @@
         meta: 2,
         ideal: null,
         totalCasos: 12000,
+        tipoSegmento: 'UMM',
+        segmentos: [{ nombre: 'Pospago', peso: null }],
         ejemplo: true,
         dolores: [
           { id: 'd1', nombre: 'Precio / oferta de la competencia', casos: 6000, atribucionManual: null, evidencia: 'Encuesta de salida Q2-2026 (n = 12.000 bajas)' },
@@ -45,6 +47,8 @@
         meta: 92,
         ideal: null,
         totalCasos: 9000,
+        tipoSegmento: 'UMM',
+        segmentos: [{ nombre: 'Hogar', peso: null }],
         ejemplo: true,
         dolores: [
           { id: 'd1', nombre: 'Falta de técnicos en la zona', casos: 4050, atribucionManual: null, evidencia: 'Órdenes reprogramadas por falta de cuadrilla (sistema de despacho)' },

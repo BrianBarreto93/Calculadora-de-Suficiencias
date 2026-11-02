@@ -8,7 +8,8 @@
   var out = [];
   function ok(c, m) { out.push((c ? 'OK    ' : 'FALLA ') + m); }
   function disparar(el, tipo) { el.dispatchEvent(new Event(tipo, { bubbles: true })); }
-  function escribir(el, v) { el.focus(); el.value = v; disparar(el, 'input'); el.blur(); }
+  // Como en el navegador: «input» con cada tecla y «change» al salir del campo
+  function escribir(el, v) { el.focus(); el.value = v; disparar(el, 'input'); disparar(el, 'change'); el.blur(); }
   function fila(tipo, id) { return $$('[data-' + tipo + ']').filter(function (e) { return e.getAttribute('data-' + tipo) === id; })[0]; }
   function heroe() { return $('.pastel-valor').textContent.replace(/\s/g, ''); }
   // Los números llevan espacios que no se parten (85 %): se comparan como espacios normales
@@ -21,7 +22,7 @@
       var ej = SuficienciaEjemplos();
       ok(titulo() === 'Churn mensual pospago', 'título inicial');
       ok(heroe() === '85%', 'héroe inicial → ' + heroe());
-      ok($$('.tarjeta').length === 2, 'riel: un solo ejemplo + «Nuevo cálculo»');
+      ok($$('.tarjeta').length === 2, 'riel: un solo ejemplo + «Agregar indicador»');
       ok(!!$('.tarjeta[data-id] .etq-ejemplo') && !!$('.pildora--ejemplo'), 'el ejemplo lleva su marca en la tarjeta y en el resultado');
       ok($$('#leyenda > li').length === 5, 'leyenda con 5 dolores');
       ok($$('#aportes > li').length === 5, 'ranking con 5 iniciativas');
@@ -111,25 +112,62 @@
       $$('.tarjeta-borrar').filter(function (b) { return b.dataset.id === copiaId; })[0].click();
       ok($$('.tarjeta[data-id]').length === 1 && titulo() === 'Churn prueba', 'borrar el indicador que estás viendo pasa al siguiente');
 
-      // Nuevo cálculo (botón de la barra): borra lo que había y empieza desde cero; se puede deshacer
-      $('.barra [data-accion="nuevo-indicador"]').click();
-      ok(titulo() === 'Indicador sin nombre', 'nuevo cálculo');
-      ok($('.pastel-valor').textContent === '—', 'el cálculo nuevo empieza sin datos');
-      ok($$('.tarjeta').length === 2, 'riel: solo el cálculo nuevo + «Nuevo cálculo» (se borró lo anterior)');
-      ok(/se borró el indicador que había/.test($('#aviso').textContent) && !!$('#aviso [data-accion="deshacer"]'), 'avisa que se borró lo anterior y ofrece deshacer');
-      $('#aviso [data-accion="deshacer"]').click();
-      ok($$('.tarjeta[data-id]').length === 1 && titulo() === 'Churn prueba', 'deshacer recupera lo que había');
+      // + Agregar indicador (tarjeta del riel): suma uno vacío al mismo tablero, sin borrar nada
+      ok($('.tarjeta--nueva b').textContent === '+ Agregar indicador', 'la tarjeta del riel se llama «+ Agregar indicador»');
       $('.tarjeta--nueva').click();
-      ok(titulo() === 'Indicador sin nombre' && $$('.tarjeta[data-id]').length === 1, 'la tarjeta «Nuevo cálculo» del riel hace lo mismo');
-      ok($$('.paso-chip.hecho').length === 0, 'cálculo nuevo sin pasos listos');
+      ok(titulo() === 'Indicador sin nombre' && $$('.tarjeta[data-id]').length === 2, 'agregar indicador suma uno vacío y conserva el anterior');
+      ok($('.pastel-valor').textContent === '—', 'el indicador nuevo empieza sin datos');
+      ok($$('.paso-chip.hecho').length === 0, 'indicador nuevo sin pasos listos');
       ok($$('.dolor').length === 0 && $$('.ini').length === 0, 'sin dolores ni iniciativas: todo se define desde cero');
       ok($$('#vigilar [data-tipo="ejemplo"]').length === 1, 'ofrece ver el ejemplo lleno');
+      ok(!$('#aviso [data-accion="deshacer"]') && /Agregaste un indicador nuevo/.test($('#aviso').textContent), 'avisa que se agregó (no borró nada)');
+      ok(!/Estado/.test($('.matriz-cab').textContent) && !$('select[data-campo="estado"]'), 'el paso 3 ya no tiene la columna «Estado»');
+
+      // Nuevo cálculo (botón rojo): pregunta si guardas el tablero actual
+      $('.barra [data-accion="nuevo-calculo"]').click();
+      var dlg = $('#dlg-pregunta');
+      ok(dlg.open && $('#preg-titulo').textContent === '¿Guardar los cambios del tablero actual?', 'nuevo cálculo pregunta si guardas');
+      ok($$('#preg-botones button').map(function (b) { return b.textContent; }).join('|') === 'Guardar|No guardar|Cancelar' && !$('#preg-campo').hidden, 'botones Guardar / No guardar / Cancelar y campo de nombre');
+      $$('#preg-botones button')[2].click();
+    } catch (e) { out.push('EXCEPCION ' + e.message + ' | ' + e.stack); terminar(); return; }
+    setTimeout(paso2, 60);
+  }, 300);
+
+  function paso2() {
+    try {
+      ok(!$('#dlg-pregunta').open && $$('.tarjeta[data-id]').length === 2, 'Cancelar no cambia nada');
+      $('.barra [data-accion="nuevo-calculo"]').click();
+      $('#preg-nombre').value = 'Mi tablero de prueba';
+      $$('#preg-botones button')[0].click();
+    } catch (e) { out.push('EXCEPCION ' + e.message + ' | ' + e.stack); terminar(); return; }
+    setTimeout(paso3, 60);
+  }
+
+  function marcar(nombre) { $$('#paso-1 input[data-campo="segmento"]').filter(function (x) { return x.value === nombre; })[0].click(); }
+  function peso(nombre) { return $$('#paso-1 input[data-campo="peso"]').filter(function (x) { return x.dataset.segmento === nombre; })[0]; }
+  function filasSeg() { return $$('#tabla-seg tbody tr').map(function (tr) { return texto(tr).replace(/ /g, ''); }); }
+  function guardado() { return JSON.parse(localStorage.getItem('suficiencia.espacio.v3') || 'null'); }
+  function dosDec(v) { return v.toFixed(2).replace('.', ','); }
+
+  function paso3() {
+    try {
+      var ej = SuficienciaEjemplos();
+      ok(titulo() === 'Indicador sin nombre' && $$('.tarjeta[data-id]').length === 1, 'Guardar: abre un tablero nuevo con un indicador vacío');
+      ok(/Guardaste «Mi tablero de prueba» en Mis cálculos/.test($('#aviso').textContent), 'avisa que se guardó → ' + texto($('#aviso')));
+      var g = guardado();
+      ok(g && g.calculos.length === 1 && g.calculos[0].nombre === 'Mi tablero de prueba' && g.calculos[0].datos.indicadores.length === 2, 'el cálculo guardado tiene sus 2 indicadores');
 
       var ins = ej[1];
       escribir($('#paso-1 input[data-campo="nombre"]'), ins.nombre);
       $('[data-accion="sentido"][data-valor="sube"]').click();
       escribir($('#paso-1 input[data-campo="ejecutado"]'), '82');
       escribir($('#paso-1 input[data-campo="meta"]'), '92');
+      ok(/el segmento/.test($('#pasos').textContent) && /Elige UMM, UMC o Transversal/.test($('#paso-1').textContent), 'sin segmento el paso 1 no está listo y lo pide');
+      $('[data-accion="tipo-segmento"][data-valor="UMM"]').click();
+      ok($$('#paso-1 input[data-campo="segmento"]').map(function (x) { return x.value; }).join('|') === 'Hogar|Pospago|Prepago', 'UMM: Hogar, Pospago y Prepago');
+      ok(/Marca al menos un segmento/.test($('#paso-1').textContent), 'mensaje simple si falta el segmento');
+      marcar('Hogar');
+      ok(!$('#paso-1 input[data-campo="peso"]'), 'UMM no pide pesos');
       escribir($('#paso-2 input[data-campo="totalCasos"]'), '9.000');
       ins.dolores.forEach(function (d) {
         $('[data-accion="agregar-dolor"]').click();
@@ -147,14 +185,44 @@
           escribir(c, String(Math.round(x.efectividad[did] * 100)));
         });
         escribir($('.ejec-ctl input.entrada', fi), String(Math.round(x.ejecucion * 100)));
-        var sel = $('select[data-campo="estado"]', fi);
-        sel.value = x.estado;
-        disparar(sel, 'change');
       });
+      // Sin la columna Estado, las iniciativas nuevas quedan «En plan»
+      ins.iniciativas.forEach(function (x) { x.estado = 'En plan'; });
       var r1 = Motor.calcular(ins);
       ok(heroe() === pctTxt(r1.real.suficiencia), 'cálculo hecho desde cero igual al motor → ' + heroe() + ' (motor: ' + pctTxt(r1.real.suficiencia) + ')');
       ok($$('.paso-chip.hecho').length === 2, 'pasos 1 y 2 listos (al 3 le falta la evidencia)');
-      ok(texto($('.kpi-mov')) === r1.real.pp.toFixed(2).replace('.', ',') + ' pp', 'mueve el indicador → ' + texto($('.kpi-mov')));
+      ok(texto($('.kpi-mov')) === dosDec(r1.real.pp) + ' pp', 'mueve el indicador → ' + texto($('.kpi-mov')));
+      ok(/UMM\s*Hogar/.test(texto($('#meta-linea'))), 'el resumen muestra el segmento → ' + texto($('#meta-linea')));
+      ok($('#panel-segmentos').hidden, 'sin Transversal no hay tabla de pesos');
+
+      // Transversal: segmentos de UMM y UMC a la vez, con peso opcional
+      $('[data-accion="tipo-segmento"][data-valor="Transversal"]').click();
+      ok($$('#paso-1 input[data-campo="segmento"]').length === 5 && $$('#paso-1 input[data-campo="segmento"]:checked').length === 1, 'Transversal muestra los 5 segmentos y conserva Hogar');
+      marcar('Pyme Fijo');
+      var total = dosDec(r1.real.pp);
+      ok(!$('#panel-segmentos').hidden && filasSeg().join('|') === 'HogarNodefinido—|PymeFijoNodefinido—|Sinasignar100%' + total + 'pp|Total100%' + total + 'pp',
+        'sin pesos: «No definido» y todo queda sin asignar → ' + filasSeg().join(' | '));
+      ok(heroe() === pctTxt(r1.real.suficiencia), 'marcar segmentos no cambia la suficiencia');
+      escribir(peso('Hogar'), '60');
+      var h60 = 0.6 * r1.real.pp;
+      ok(texto($('#paso-1 .seg-fila.marcado .seg-aporte')) === 'Aporta ' + dosDec(h60) + ' pp', 'Hogar 60 % aporta el 60 % de lo que mueve → ' + texto($('#paso-1 .seg-aporte')));
+      ok(/Falta repartir 40/.test(texto($('#paso-1'))), 'aviso amable: falta repartir 40 %');
+      var pf = peso('Pyme Fijo');
+      pf.focus(); pf.value = '5'; disparar(pf, 'input');
+      ok(!pf.hasAttribute('aria-invalid') && filasSeg()[1].indexOf('Nodefinido') > 0, 'mientras escribes no se guarda un número a medio escribir');
+      pf.value = '50'; disparar(pf, 'input');
+      ok(pf.getAttribute('aria-invalid') === 'true' && /más de 100 %/.test(texto($('#paso-1 .pista--alerta[role="alert"]'))), 'si la suma pasa de 100 % se marca al escribir, con mensaje');
+      disparar(pf, 'change'); pf.blur();
+      ok(pf.value === '' && !pf.hasAttribute('aria-invalid') && /No se guardó/.test(texto($('#paso-1 .pista--alerta[role="alert"]'))) && filasSeg()[1].indexOf('Nodefinido') > 0,
+        'al confirmar se rechaza: el campo vuelve al peso anterior y lo dice');
+      escribir(peso('Pyme Fijo'), '40');
+      ok(!peso('Pyme Fijo').hasAttribute('aria-invalid') && !/Falta repartir/.test(texto($('#paso-1'))), '60 % + 40 % = 100 %: ya no falta repartir');
+      var filas = filasSeg();
+      ok(filas[0] === 'Hogar60%' + dosDec(h60) + 'pp' && filas[1] === 'PymeFijo40%' + dosDec(0.4 * r1.real.pp) + 'pp' && filas[2] === 'Sinasignar0%0,00pp' && filas[3] === 'Total100%' + total + 'pp',
+        'tabla del resumen: segmento | peso | aporte, sin asignar y total → ' + filas.join(' | '));
+      escribir(peso('Pyme Fijo'), '');
+      ok(/Falta repartir 40/.test(texto($('#paso-1'))) && filasSeg()[1].indexOf('Nodefinido') > 0, 'dejar el peso vacío no pasa nada: vuelve a «No definido»');
+      ok(heroe() === pctTxt(r1.real.suficiencia), 'los pesos no cambian la suficiencia → ' + heroe());
 
       $('[data-accion="sentido"][data-valor="baja"]').click();
       ok($('.pastel-valor').textContent === '✓', '"baja es mejor" deja la meta cumplida → ' + $('.pastel-valor').textContent);
@@ -173,13 +241,47 @@
       while ($$('.ini').length < 15) $('[data-accion="agregar-ini"]').click();
       var btnI = $('[data-accion="agregar-ini"]');
       ok(btnI.disabled && /15 de 15/.test(btnI.textContent), 'máximo 15 iniciativas → ' + btnI.textContent);
-      ok($('.matriz').style.getPropertyValue('--min-ancho') === (840 + 68 * 15) + 'px' && !!$('.matriz-scroll .matriz'), 'la tabla de 15 dolores se desliza de lado');
+      ok($('.matriz').style.getPropertyValue('--min-ancho') === (706 + 68 * 15) + 'px' && !!$('.matriz-scroll .matriz'), 'la tabla de 15 dolores se desliza de lado');
       ok($$('#pastel-svg .porcion').length === 15, 'el pastel muestra 15 porciones');
       ok($$('#leyenda > li[data-dolor]').length === 6 && $('#leyenda [data-accion="mas-leyenda"]').textContent === 'Ver los 15 dolores', 'la leyenda muestra 6 y ofrece ver los 15');
       $('#leyenda [data-accion="mas-leyenda"]').click();
       ok($$('#leyenda > li[data-dolor]').length === 15, 'al pedirlo muestra los 15 dolores');
 
-      // «Ver el ejemplo lleno»: el ejemplo se renombró (ya es un cálculo propio), así que se vuelve a agregar
+      // Mis cálculos: renombrar y abrir (pregunta antes porque hay cambios)
+      $('[aria-controls="menu-calculos"]').click();
+      var menu = $('#menu-calculos');
+      ok(!menu.hidden && $$('.calc-item', menu).length === 1 && /Cálculo sin guardar/.test(menu.textContent) && /cambios sin guardar/.test(menu.textContent), 'Mis cálculos lista el guardado y dice que el actual no está guardado');
+      var nom = $('.calc-nombre', menu);
+      nom.value = 'Tablero renombrado';
+      disparar(nom, 'change');
+      ok(guardado().calculos[0].nombre === 'Tablero renombrado', 'el nombre se edita en la lista');
+      ok(/\d{4}/.test($('.calc-item small', menu).textContent), 'muestra la fecha → ' + $('.calc-item small', menu).textContent);
+      $('[data-accion="abrir-calculo"]', menu).click();
+      ok($('#dlg-pregunta').open, 'abrir otro cálculo pregunta si guardas los cambios');
+      $$('#preg-botones button')[1].click();
+    } catch (e) { out.push('EXCEPCION ' + e.message + ' | ' + e.stack); terminar(); return; }
+    setTimeout(paso4, 60);
+  }
+
+  function paso4() {
+    try {
+      ok($$('.tarjeta[data-id]').length === 2 && titulo() === 'Indicador sin nombre', 'No guardar: abre el cálculo guardado tal como quedó');
+      ok(/Abriste «Tablero renombrado»/.test($('#aviso').textContent) && !!$('#aviso [data-accion="deshacer"]'), 'avisa y ofrece deshacer');
+      $('#aviso [data-accion="deshacer"]').click();
+      ok(titulo() === 'Instalaciones en fecha (FTTH)' && $$('.dolor').length === 15, 'deshacer devuelve el tablero que no guardaste');
+      $('[aria-controls="menu-calculos"]').click();
+      $('[data-accion="eliminar-calculo"]', $('#menu-calculos')).click();
+      ok($('#dlg-pregunta').open && /¿Eliminar «Tablero renombrado»\?/.test($('#preg-titulo').textContent), 'eliminar pide confirmación');
+      $$('#preg-botones button')[0].click();
+    } catch (e) { out.push('EXCEPCION ' + e.message + ' | ' + e.stack); terminar(); return; }
+    setTimeout(paso5, 60);
+  }
+
+  function paso5() {
+    try {
+      ok(guardado().calculos.length === 0 && /Eliminaste «Tablero renombrado»/.test($('#aviso').textContent), 'eliminado de Mis cálculos');
+
+      // «Ver el ejemplo lleno»: el ejemplo no está en este tablero, así que se vuelve a agregar
       $('[data-accion="ver-ejemplo"]').click();
       ok(titulo() === 'Churn mensual pospago' && !!$('.pildora--ejemplo') && heroe() === '85%', 'Ver el ejemplo lleno lo trae de vuelta');
       ok($$('.tarjeta[data-id]').length === 2, 'sin tocar tus cálculos');
@@ -193,14 +295,16 @@
       $('.barra [data-accion="como-funciona"]').click();
       ok($('#dlg-como').open && $$('#dlg-como [data-demo] .porcion').length > 0, 'diálogo con los 4 pasteles de ejemplo');
       $('#dlg-como [data-accion="cerrar-dialogo"]').click();
+    } catch (e) { out.push('EXCEPCION ' + e.message + ' | ' + e.stack); terminar(); return; }
 
-      setTimeout(function () {
-        var guardado = localStorage.getItem('suficiencia.datos.v1');
-        ok(!!guardado && guardado.indexOf('Instalaciones en fecha (FTTH)') >= 0 && guardado.indexOf('Churn prueba') < 0 && JSON.parse(guardado).version === 2, 'se guarda en el navegador');
-        terminar();
-      }, 500);
-    } catch (e) { out.push('EXCEPCION ' + e.message + ' | ' + e.stack); terminar(); }
-  }, 300);
+    setTimeout(function () {
+      var g = guardado();
+      var ins = g && g.actual.indicadores.filter(function (x) { return x.nombre === 'Instalaciones en fecha (FTTH)'; })[0];
+      ok(!!g && g.version === 3 && !!ins && JSON.stringify(g).indexOf('Churn prueba') < 0, 'se guarda en el navegador (versión 3)');
+      ok(ins && ins.tipoSegmento === 'Transversal' && JSON.stringify(ins.segmentos) === JSON.stringify([{ nombre: 'Hogar', peso: 0.6 }, { nombre: 'Pyme Fijo', peso: null }]), 'se guardan los segmentos y sus pesos → ' + JSON.stringify(ins && ins.segmentos));
+      terminar();
+    }, 500);
+  }
 
   function terminar() {
     out.push('errores JS: ' + JSON.stringify(errores));

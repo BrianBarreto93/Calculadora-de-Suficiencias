@@ -6,19 +6,28 @@ Una sola vista con dos zonas y una regla que se explica en una frase: **lo oscur
 
 | Zona | Referencia | Qué contiene |
 |---|---|---|
-| Barra superior | Apple (vidrio esmerilado) | Marca, **Cómo funciona**, **Importar Excel**, **Exportar Excel**, **Nuevo cálculo** y un resumen fijo (anillo, %, estado) que aparece al bajar por la página |
+| Barra superior | Apple (vidrio esmerilado) | Marca, **Cómo funciona**, **Importar Excel**, **Exportar Excel**, **Mis cálculos**, **Nuevo cálculo** y un resumen fijo (anillo, %, estado) que aparece al bajar por la página |
 | Riel "Tus indicadores" | Netflix (filas de títulos) | Una tarjeta por indicador con su pastel en miniatura, su suficiencia y su estado. El ejemplo lleva la marca "Ejemplo" |
 | Cartel | Netflix (título destacado) | Nombre del indicador, frase en palabras simples y 4 tarjetas: mueve el indicador / así quedarías / te faltaría / si todo se cumple |
 | El pastel | Apple (anillos de actividad) | Firma visual del producto (ver abajo) |
-| Lo que debes vigilar · Quién aporta más | — | Alertas ordenadas y ranking de iniciativas con "si falla" |
+| Lo que debes vigilar · Quién aporta más · Aporte por segmento | — | Alertas ordenadas, ranking de iniciativas con "si falla" y, en indicadores Transversales, la tabla segmento / peso / aporte con «Sin asignar» y total |
 | Taller (pasos 1, 2 y 3) | Notion (bloques editables) | Formularios y tablas que se editan en el mismo lugar; el resultado cambia en vivo |
 
-## Nuevo cálculo y ejemplo
+## Agregar indicador, nuevo cálculo y Mis cálculos
 
-- **Nuevo cálculo** borra todos los indicadores y deja uno vacío para definir todo desde cero (nombre, qué es mejor, hoy, meta, casos, dolores e iniciativas) y lleva al paso 1. El aviso ofrece **Deshacer** durante 12 segundos.
+- **+ Agregar indicador** (última tarjeta del riel) suma un indicador vacío al mismo tablero y lleva al paso 1. No borra nada y no tiene límite fijo.
+- **Nuevo cálculo** (botón rojo) abre un tablero nuevo con un indicador vacío. Si el tablero actual tiene cambios sin guardar, primero pregunta «¿Guardar los cambios del tablero actual?» (Guardar / No guardar / Cancelar). Si eliges No guardar, el aviso ofrece **Deshacer**. Reemplaza la decisión del 28-oct de que Nuevo cálculo borrara todo.
+- **Mis cálculos** lista los cálculos guardados (nombre editable y fecha): se abren, se renombran y se eliminan (con confirmación). También tiene **Guardar**, **Descargar respaldo** y **Cargar respaldo**.
+- El tablero que se ve se guarda solo a cada cambio; guardar en Mis cálculos es una copia con nombre para volver a abrirla.
 - Cada tarjeta del riel tiene una **papelera** para eliminar ese indicador (aparece al pasar el mouse o con el teclado, y siempre en pantallas táctiles). También se puede deshacer.
-- Al abrir por primera vez hay **un solo ejemplo lleno** (Churn mensual pospago) marcado como "Ejemplo". Un cálculo vacío ofrece verlo, y el menú **Más › Ver el ejemplo lleno** lo vuelve a traer si se borró (por ejemplo, con Nuevo cálculo), sin tocar los cálculos propios.
+- Al abrir por primera vez hay **un solo ejemplo lleno** (Churn mensual pospago) marcado como "Ejemplo". Un cálculo vacío ofrece verlo, y el menú **Más › Ver el ejemplo lleno** lo vuelve a traer si no está (por ejemplo, en un cálculo nuevo), sin tocar los cálculos propios.
 - Cuando le pones tu propio nombre al ejemplo, deja de ser ejemplo: pasa a ser tu cálculo.
+
+## Segmento
+
+- Obligatorio en el paso 1: primero la unidad (**UMM**, **UMC** o **Transversal**) y luego los segmentos. UMM: Hogar, Pospago, Prepago. UMC: Pyme Fijo, Pyme Móvil. Transversal deja marcar segmentos de las dos. Si falta, el paso 1 no queda listo y se pide con un mensaje simple.
+- **Peso del segmento (%)**: opcional y solo en indicadores Transversales. Vacío = no pasa nada. Aporte en pp = peso × lo que mueve el indicador (lo calcula la herramienta). Cada peso va de 0 a 100 y la suma no puede pasar de 100 % (se rechaza con un mensaje); si suma menos, un aviso amable dice cuánto falta repartir.
+- Los pesos no cambian la suficiencia: solo reparten los puntos que mueve el indicador. La herramienta nunca inventa ni reparte pesos.
 
 ## El pastel
 
@@ -48,12 +57,13 @@ Reglas: con "reducir movimiento" activado en el sistema no hay animaciones; cada
 | Hoja | Qué tiene |
 |---|---|
 | Resumen | Cómo leer el archivo, el comparativo de todos los indicadores con su semáforo y un enlace a cada hoja |
-| Una por indicador | Resultado (suficiencia, mueve el indicador, así quedarías, te faltaría), lo que debes vigilar, el ranking y los pasos 1, 2 y 3 |
+| Una por indicador | Resultado, **cálculo paso a paso** (problema, brecha, impacto, lo resuelto, puntos, suficiencia, semáforo y lectura en palabras simples), lo que debes vigilar, el ranking y los pasos 1 (con el segmento y, si hay pesos, la tabla segmento / peso / aporte), 2 y 3 |
 | Ajustes | Semáforo y umbrales de las alertas |
 | Glosario | Las palabras, las etiquetas y cómo volver a abrir el archivo en la calculadora |
 
 - Celdas **azules** = datos (se pueden editar, con listas y validaciones); **grises** = resultados.
-- Los dolores van en columnas y son las mismas columnas en el paso 2 y en la matriz del paso 3.
+- Los dolores van en columnas y son las mismas columnas en el paso 2 y en la matriz del paso 3. El paso 3 ya no tiene la columna Estado (tampoco en pantalla); al importar, cada iniciativa conserva el estado que tenía.
+- Nombres de hoja únicos, de máximo 31 caracteres y sin `[ ] : * ? / \ .`
 - El importador busca cada dato **por su título**, no por su celda: el archivo sigue funcionando si alguien inserta filas o columnas. Acepta 45 o 45 % y fechas escritas como 31/03/2027.
 - La primera celda de cada hoja de indicador (`SUFICIENCIA 2027 · HOJA DE INDICADOR`) la identifica al importar. Si no aparece, se intenta leer como la plantilla.
 
@@ -93,7 +103,8 @@ Si no hay internet, se usan las fuentes del sistema y todo sigue funcionando.
 | `assets/css/app.css` | Estilos con tokens; diseño responsivo con *container queries* |
 | `tests/paridad_excel.test.js` | Comprueba que el motor da lo mismo que el Excel (hasta 12 decimales) |
 | `tests/excel.test.js` | Comprueba que el .xlsx está bien formado, se relee igual y que se lee la plantilla real |
-| `tests/navegador/*.js` | Interacción, importar la plantilla, exportar e importar Excel, y animaciones; las corre `herramientas/probar_tablero.ps1` |
+| `tests/segmentos.test.js` | Peso por segmento (con y sin pesos, suma mayor a 100 %), migración del guardado y respaldo .json |
+| `tests/navegador/*.js` | Interacción, importar la plantilla, exportar e importar Excel, persistencia (dos aperturas con el mismo perfil), celular a 390 px y animaciones; las corre `herramientas/probar_tablero.ps1` |
 | `herramientas/*.ps1` | Generar y verificar la plantilla de Excel, y probar el tablero |
 
 Reglas que conviene mantener:
@@ -101,4 +112,4 @@ Reglas que conviene mantener:
 - Toda la matemática va en `engine.js`. Si cambia una fórmula, debe cambiar también en el Excel (`herramientas/generar_plantilla.ps1`) y en la prueba de paridad.
 - Si cambia un título del Excel exportado (`hojaIndicador` en `app.js`), revisa que el importador (`leerHojaIndicador`) lo siga encontrando.
 - Los textos que escribe el usuario se insertan siempre con `textContent`, nunca como HTML.
-- Los datos se guardan en el navegador (`localStorage`). Para compartirlos se usa **Exportar Excel** o **Guardar una copia** (.json).
+- Los datos se guardan en el navegador (`localStorage`, clave `suficiencia.espacio.v3`: Mis cálculos, el tablero actual y cuál está abierto). Si cambia el formato se sube la versión y `Motor.normalizarEspacio` migra lo anterior (la clave `suficiencia.datos.v1` de la versión 2 se migra sola). Si el navegador no deja guardar, se avisa y se sigue trabajando. Para llevar los datos a otro lado se usa **Descargar respaldo** (.json); para compartir, **Exportar Excel**.

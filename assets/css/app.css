@@ -138,6 +138,33 @@ ol, ul { padding: 0; list-style: none; }
 .menu .peligro { color: var(--rojo); }
 .menu .peligro .ic { color: var(--rojo); }
 .menu hr { border: 0; border-top: 1px solid var(--linea-suave); margin: 6px 4px; }
+/* Mis cálculos: lista con nombre editable, fecha, abrir y eliminar */
+.menu--calculos { width: min(400px, calc(100vw - 24px)); max-height: calc(100vh - 80px); overflow: auto; padding: 10px; }
+.calc-cab { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 6px 12px; border-bottom: 1px solid var(--linea-suave); }
+.calc-cab p { display: grid; min-width: 0; font-size: 14px; }
+.calc-cab b { overflow-wrap: anywhere; }
+.calc-cab small { font-size: 12px; color: var(--tinta-3); }
+.calc-cab .calc-cambios { color: var(--rojo); font-weight: 600; }
+.menu .calc-cab .btn { width: auto; height: 36px; padding: 0 16px; flex: none; color: #fff; background: var(--rojo); justify-content: center; }
+.menu .calc-cab .btn:hover { background: var(--rojo-hover); }
+.menu .calc-cab .btn:focus-visible { outline: 2px solid var(--rojo); outline-offset: 2px; background: var(--rojo); }
+.calc-lista { display: grid; gap: 6px; padding: 10px 0 4px; }
+.calc-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 8px; align-items: center; padding: 8px; border: 1px solid var(--linea-suave); border-radius: 12px; }
+.calc-item.abierto { border-color: rgba(218, 41, 28, .5); background: var(--rojo-suave); }
+.calc-nombre { grid-column: 1; min-width: 0; height: 34px; padding: 0 8px; border: 1px solid transparent; border-radius: 8px; background: transparent; font-weight: 600; font-size: 14.5px; }
+.calc-nombre:hover { background: var(--hoja-2); }
+.calc-nombre:focus { outline: none; background: #fff; border-color: var(--rojo); }
+.calc-item small { grid-column: 1; padding: 0 8px; font-size: 12px; color: var(--tinta-3); }
+.calc-botones { grid-column: 2; grid-row: 1 / span 2; display: flex; align-items: center; gap: 4px; }
+.menu .calc-botones button { width: auto; padding: 0; }
+.menu .calc-botones .btn-chico-claro { height: 32px; padding: 0 14px; border: 1px solid var(--linea); border-radius: 999px; font-weight: 600; font-size: 13px; }
+.menu .calc-botones .btn-icono { width: 34px; height: 34px; justify-content: center; }
+.calc-abierto { font: 600 11px/1 var(--f-mono); color: var(--rojo); text-transform: uppercase; letter-spacing: .04em; padding: 0 6px; }
+.calc-vacio, .calc-nota { padding: 10px 8px; font-size: 13px; line-height: 1.45; color: var(--tinta-2); }
+.calc-nota { padding-top: 4px; font-size: 12px; color: var(--tinta-3); }
+@media (max-width: 760px) {
+  .menu--calculos { position: fixed; top: 64px; left: 12px; right: 12px; width: auto; }
+}
 
 /* ------------------------------------------------------------------ escenario (resultado) */
 .escenario { position: relative; isolation: isolate; color: var(--tiza); background: var(--noche); overflow: clip; }
@@ -389,6 +416,14 @@ ol, ul { padding: 0; list-style: none; }
 .ap-barra i { display: block; height: 100%; width: calc(var(--v) * 100%); min-width: 3px; border-radius: 4px; background: #EDEDED; }
 .ap-pie { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; font-size: 12.5px; color: var(--tiza-3); }
 .ap-pie b { color: var(--tiza); font-weight: 600; }
+.panel-segmentos { grid-column: 1 / -1; }
+.tabla-seg { width: 100%; max-width: 640px; margin: 10px 0 8px; border-collapse: collapse; font-size: 14px; font-variant-numeric: tabular-nums; }
+.tabla-seg th, .tabla-seg td { padding: 9px 10px; border-top: 1px solid var(--noche-linea); text-align: right; color: var(--tiza); font-weight: 500; }
+.tabla-seg th:first-child { text-align: left; }
+.tabla-seg thead th { border-top: 0; font-size: 12.5px; font-weight: 600; color: var(--tiza-3); }
+.tabla-seg tbody th { font-weight: 600; color: #fff; }
+.tabla-seg .seg-sin th, .tabla-seg .seg-sin td { color: var(--tiza-3); }
+.tabla-seg .seg-total th, .tabla-seg .seg-total td { font-weight: 700; color: #fff; border-top-color: rgba(255, 255, 255, .3); }
 
 /* chips de estado: siempre icono + texto */
 .chip {
@@ -529,6 +564,22 @@ select.entrada { padding-right: 30px; appearance: none; -webkit-appearance: none
   .c-ideal { grid-column: 1 / -1; }
 }
 .c-sentido .segmentos { width: 100%; }
+.c-segmento { grid-column: 1 / -1; }
+.c-segmento > .segmentos { width: 100%; }
+.seg-lista { display: grid; gap: 10px; }
+.seg-lista:empty { display: none; }
+.seg-grupo { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; }
+.seg-unidad { flex: 0 0 100%; font: 600 11px/1 var(--f-mono); color: var(--tinta-3); letter-spacing: .04em; }
+.seg-fila { display: grid; gap: 6px; padding: 6px; border-radius: 12px; border: 1px solid var(--linea); background: var(--hoja); }
+.seg-fila.marcado { border-color: rgba(218, 41, 28, .55); background: var(--rojo-suave); }
+.seg-marca { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 8px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.seg-marca input { width: 18px; height: 18px; margin: 0; accent-color: var(--rojo); }
+.seg-peso { display: grid; gap: 4px; padding: 0 4px 4px; }
+.seg-peso-etq { font-size: 12px; font-weight: 600; color: var(--tinta-2); }
+.seg-peso .con-unidad { width: 150px; }
+.seg-peso .entrada { height: 38px; font-size: 15px; background: #fff; }
+.seg-aporte { font-size: 12.5px; font-weight: 600; color: var(--tinta); }
+.seg-ayuda { margin-top: 2px; }
 
 /* barra de la brecha (bullet) */
 .bala { display: grid; gap: 6px; padding: 18px 18px 14px; border-radius: 16px; background: var(--hoja-2); border: 1px solid var(--linea-suave); }
@@ -617,20 +668,16 @@ select.entrada { padding-right: 30px; appearance: none; -webkit-appearance: none
   .matriz { display: grid; gap: 12px; }
   .ini {
     grid-template-columns: 40px minmax(0, 1fr) auto;
-    grid-template-areas: "n nombre mas" "celdas celdas celdas" "ejec ejec ejec" "estado aporte aporte" "detalle detalle detalle";
+    grid-template-areas: "n nombre mas" "celdas celdas celdas" "ejec ejec ejec" "aporte aporte aporte" "detalle detalle detalle";
     padding: 14px; border: 1px solid var(--linea-suave); border-radius: 16px;
   }
   .ini > .i-n { grid-area: n; padding-top: 6px; }
   .ini > .i-nombre { grid-area: nombre; }
   .ini > .i-celdas { grid-area: celdas; display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
   .ini > .i-ejec { grid-area: ejec; }
-  .ini > .i-estado { grid-area: estado; }
   .ini > .i-aporte { grid-area: aporte; }
   .ini > .i-mas { grid-area: mas; }
   .ini > .i-detalle { grid-area: detalle; }
-}
-@container (width < 480px) {
-  .ini { grid-template-areas: "n nombre mas" "celdas celdas celdas" "ejec ejec ejec" "estado estado estado" "aporte aporte aporte" "detalle detalle detalle"; }
 }
 .num-ini { display: grid; place-items: center; width: 32px; height: 28px; border-radius: 8px; background: var(--tinta); color: #fff; font: 600 12px/1 var(--f-mono); }
 .revision { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
@@ -679,7 +726,7 @@ select.entrada { padding-right: 30px; appearance: none; -webkit-appearance: none
 @container (width >= 1100px) {
   .matriz {
     display: grid;
-    grid-template-columns: 44px minmax(200px, 1.8fr) repeat(var(--nd, 1), minmax(58px, .56fr)) minmax(160px, .95fr) 124px minmax(186px, 1.2fr) 76px;
+    grid-template-columns: 44px minmax(200px, 1.8fr) repeat(var(--nd, 1), minmax(58px, .56fr)) minmax(160px, .95fr) minmax(186px, 1.2fr) 76px;
     column-gap: 10px;
   }
   .matriz-cab, .ini { grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; }
@@ -754,8 +801,15 @@ select.entrada { padding-right: 30px; appearance: none; -webkit-appearance: none
 @media (max-width: 560px) { .etiquetas-lista li { grid-template-columns: 1fr; gap: 4px; } }
 .dlg-pie { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 @media (max-width: 640px) {
-  .dlg { width: 100%; max-width: 100%; max-height: 92vh; margin: auto 0 0; border-radius: 24px 24px 0 0; }
+  .dlg, .dlg.dlg--chico { width: 100%; max-width: 100%; max-height: 92vh; margin: auto 0 0; border-radius: 24px 24px 0 0; }
 }
+
+/* diálogo de pregunta (guardar, eliminar) */
+.dlg--pregunta { width: min(520px, 100% - 32px); }
+.preg-titulo { font-size: 22px; font-weight: 700; line-height: 1.25; letter-spacing: -.01em; }
+.preg-texto { margin-top: 8px; font-size: 15px; color: var(--tinta-2); }
+.preg-campo { margin-top: 16px; }
+.dlg--pregunta .dlg-pie { flex-wrap: wrap; }
 
 /* diálogo para exportar a Excel */
 .dlg--chico { width: min(620px, 100% - 32px); }
@@ -816,6 +870,7 @@ select.entrada { padding-right: 30px; appearance: none; -webkit-appearance: none
   .escenario .titulo, .escenario .mini-titulo, .escenario .kpi dd, .escenario .frase strong, .escenario .pastel-valor,
   .escenario .ley-dato, .escenario .ap-valor, .escenario .ap-nombre, .escenario .vig strong { color: #000; }
   .escenario .frase, .escenario .mini-ayuda, .escenario .kpi dt, .escenario .vig p { color: #333; }
+  .tabla-seg th, .tabla-seg td, .tabla-seg tbody th, .tabla-seg .seg-total th, .tabla-seg .seg-total td { color: #000; border-color: #ccc; }
   .panel-oscuro { background: #fff; border-color: #ccc; }
   .porcion-base { fill: #E5E5E5; stroke: #fff; }
   .porcion-resuelta { fill: #222; stroke: #fff; }

@@ -1,10 +1,12 @@
 ﻿# Prueba el tablero (suficiencia_cx.html) en un navegador sin ventana (Microsoft Edge o Google Chrome).
-#  1. Interacción: deslizadores, celdas, deshacer, nuevo cálculo desde cero, 15 dolores, guardar.
+#  1. Interacción: deslizadores, celdas, deshacer, agregar indicador, nuevo cálculo, Mis cálculos, segmentos y pesos, 15 dolores.
 #  2. Importar Excel: carga Plantilla_Suficiencia.xlsx y compara con los ejemplos.
 #  3. Exportar Excel: exporta, relee el archivo, lo edita como lo haría alguien en Excel y lo vuelve a importar.
 #     Si Excel está instalado, además abre el archivo exportado con Excel para confirmar que no pide reparación.
-#  4. Animaciones: los pasteles se despliegan y terminan en el valor correcto.
-# Las pruebas 1 a 3 corren con "reducir movimiento" para leer los valores sin esperar las animaciones.
+#  4. Persistencia: abre la página dos veces con el mismo perfil (todo debe seguir igual) y prueba el respaldo .json.
+#  5. Celular: el tablero en 390 px de ancho, sin desplazamiento de lado.
+#  6. Animaciones: los pasteles se despliegan y terminan en el valor correcto.
+# Las pruebas 1 a 5 corren con "reducir movimiento" para leer los valores sin esperar las animaciones.
 # Uso:  powershell -ExecutionPolicy Bypass -File herramientas\probar_tablero.ps1 [-SinImportar] [-SinExcel]
 param([switch]$SinImportar, [switch]$SinExcel)
 $ErrorActionPreference = 'Stop'
@@ -88,6 +90,14 @@ if (-not $SinExcel -and $script:ultimoDom -match '(?s)<pre id="xlsx-base64">(.*?
     $r
     $resultados += $r
 }
+"`n== Persistencia (dos aperturas con el mismo perfil) y respaldo"
+$r = (Correr 'persistencia' 'persistencia.js' @($sinMovimiento)) + "`n" + (Correr 'persistencia' 'persistencia.js' @($sinMovimiento))
+$r
+$resultados += $r
+"`n== Celular (390 px)"
+$r = Correr 'movil' 'movil.js' @($sinMovimiento, '--allow-file-access-from-files')
+$r
+$resultados += $r
 "`n== Animaciones"
 $r = Correr 'animaciones' 'animaciones.js' @()
 $r

@@ -54,9 +54,9 @@
     if (espacio >= max / 2) corte = corte.slice(0, espacio);
     return corte.replace(/[\s(«<&,;:.\-–]+$/, '') + '…';
   }
-  // Nombre de hoja válido para Excel: sin []:*?/\, sin apóstrofo al inicio o al final, máximo 31 caracteres y sin repetir.
+  // Nombre de hoja válido para Excel: sin []:*?/\ ni puntos, sin apóstrofo al inicio o al final, máximo 31 caracteres y sin repetir.
   function nombreHoja(nombre, usados) {
-    var base = String(nombre || '').replace(/[[\]:*?/\\\u0000-\u001F]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^'+|'+$/g, '').trim() || 'Hoja';
+    var base = String(nombre || '').replace(/[[\]:*?/\\.\u0000-\u001F]/g, ' ').replace(/\s+/g, ' ').trim().replace(/^'+|'+$/g, '').trim() || 'Hoja';
     var n = 1;
     var final;
     do {

@@ -56,7 +56,8 @@
 
   // Indicadores de prueba
   var ej = SuficienciaEjemplos();
-  var grande = { id: 'grande', nombre: 'Disponibilidad «red» & <móvil> "5G"', sentido: 'sube', unidad: '%', ejecutado: 97.5, meta: 99.2, ideal: null, totalCasos: 15000, dolores: [], iniciativas: [] };
+  var grande = { id: 'grande', nombre: 'Disponibilidad «red» & <móvil> "5G"', sentido: 'sube', unidad: '%', ejecutado: 97.5, meta: 99.2, ideal: null, totalCasos: 15000, dolores: [], iniciativas: [],
+    tipoSegmento: 'Transversal', segmentos: [{ nombre: 'Hogar', peso: 0.5 }, { nombre: 'Prepago', peso: null }, { nombre: 'Pyme Móvil', peso: 0.25 }] };
   for (var j = 0; j < 15; j++) grande.dolores.push({ id: 'g' + j, nombre: 'Dolor ' + (j + 1) + (j === 0 ? ' con un nombre bastante largo para ver cómo se ajusta en la celda' : ''), casos: 1000 + j * 100, atribucionManual: null, evidencia: j % 3 ? 'Fuente ' + j : '' });
   for (var i = 0; i < 15; i++) {
     var ef = {};
@@ -119,6 +120,30 @@
       ok(/Sin cobertura/.test(textos) && /Reemplazar/.test(textos) && /Cerca/.test(textos), 'trae semáforo, etiquetas y alertas en palabras');
       ok(!!libro.hojas.Glosario && JSON.stringify(libro.hojas.Glosario).indexOf('Mueve el indicador') >= 0, 'el glosario explica «Mueve el indicador»');
 
+      // Hojas: nombres válidos, Resumen primero, el cálculo paso a paso y el segmento
+      ok(libro.nombres[0] === 'Resumen' && libro.nombres.every(function (n, k) {
+        return n.length <= 31 && !/[[\]:*?/\\.]/.test(n) && libro.nombres.indexOf(n) === k;
+      }), 'nombres de hoja únicos, de máximo 31 caracteres y sin [ ] : * ? / \\ .');
+      var celdas = function (h) { return Object.keys(h).map(function (k) { return String(h[k].v); }); };
+      var tChurn = celdas(churn);
+      ok(tChurn.indexOf('CÓMO SE CALCULA LA SUFICIENCIA   ·   PASO A PASO') >= 0 && tChurn.indexOf('Suficiencia = puntos ÷ brecha') >= 0 && tChurn.indexOf('En palabras simples') >= 0,
+        'cada hoja trae el cálculo paso a paso y la lectura en palabras simples');
+      ok(tChurn.indexOf('Tipo de segmento') >= 0 && tChurn.indexOf('UMM') >= 0 && tChurn.indexOf('Pospago') >= 0, 'la hoja dice el segmento (UMM · Pospago)');
+      ok(tChurn.indexOf('Peso del segmento (%)') < 0, 'sin pesos definidos no aparece la tabla de pesos');
+      var gr = libro.hojas[libro.nombres[3]];
+      var tGr = celdas(gr);
+      ok(tGr.indexOf('Peso del segmento (%)') >= 0 && tGr.indexOf('Sin asignar') >= 0 && tGr.indexOf('No definido') >= 0, 'con pesos: segmento, peso, «No definido», sin asignar y total');
+      var rGr = Motor.calcular(Motor.normalizarIndicador(grande));
+      var refDe = function (h, valor) { return Object.keys(h).filter(function (k) { return h[k].v === valor; })[0]; };
+      var fH = Number(refDe(gr, 'Hogar').slice(1));
+      var fSin = Number(refDe(gr, 'Sin asignar').slice(1));
+      ok(gr['C' + fH].v === 0.5 && Math.abs(gr['D' + fH].v - 0.5 * rGr.real.pp) < 1e-12, 'Hogar: 50 % y su aporte en pp = motor');
+      ok(Math.abs(gr['C' + fSin].v - 0.25) < 1e-12 && Math.abs(gr['D' + fSin].v - 0.25 * rGr.real.pp) < 1e-12, 'sin asignar: 25 % y sus pp');
+      var paso3 = Object.keys(gr).filter(function (k) { return gr[k].v === 'Iniciativa'; }).map(function (k) { return k.replace(/^[A-Z]+/, ''); });
+      var cab3 = Object.keys(gr).filter(function (k) { return paso3.indexOf(k.replace(/^[A-Z]+/, '')) >= 0; }).map(function (k) { return gr[k].v; });
+      ok(cab3.indexOf('Ejecución a 2027') >= 0 && cab3.indexOf('Estado') < 0, 'el paso 3 del Excel ya no repite la columna «Estado»');
+      ok(celdas(res).indexOf('Segmento') >= 0 && celdas(res).indexOf('UMM · Pospago') >= 0, 'el Resumen tiene la columna Segmento');
+
       // Primera vuelta: importar el archivo tal cual
       subir(new File([Uint8Array.from(atob(base64), function (c) { return c.charCodeAt(0); })], 'exportado.xlsx'));
       // La página guarda en el navegador un instante después de pintar
@@ -126,7 +151,7 @@
     }).catch(function (e) { out.push('EXCEPCION ' + e.message + ' | ' + e.stack); terminar(); });
   }
 
-  function guardados() { return JSON.parse(localStorage.getItem('suficiencia.datos.v1') || '{"indicadores":[]}').indicadores; }
+  function guardados() { return JSON.parse((localStorage.getItem('suficiencia.espacio.v3') || '{"actual":{"indicadores":[]}}')).actual.indicadores; }
   function comparar(a, b, que) {
     var ra = Motor.calcular(a);
     var rb = Motor.calcular(b);
@@ -153,6 +178,10 @@
       var g = inds.filter(function (x) { return x.nombre === grande.nombre; })[0];
       ok(g && g.dolores.length === 15 && g.iniciativas.length === 15, 'el indicador grande vuelve con 15 dolores y 15 iniciativas');
       ok(g && g.iniciativas[4].ejecucion === null, 'una ejecución vacía sigue vacía');
+      ok(g && g.tipoSegmento === 'Transversal' && JSON.stringify(g.segmentos) === JSON.stringify(Motor.normalizarIndicador(grande).segmentos), 'el segmento y sus pesos vuelven del Excel → ' + JSON.stringify(g && g.segmentos));
+      var c0 = inds.filter(function (x) { return x.nombre === ej[0].nombre; })[0];
+      ok(c0 && c0.tipoSegmento === 'UMM' && c0.segmentos.length === 1 && c0.segmentos[0].nombre === 'Pospago', 'el segmento sin peso también vuelve');
+      ok(c0 && c0.iniciativas.map(function (x) { return x.estado; }).join() === ej[0].iniciativas.map(function (x) { return x.estado; }).join(), 'sin la columna Estado en el Excel, cada iniciativa conserva su estado');
       ok(inds.every(function (x) { return !x.ejemplo; }), 'lo importado ya no se marca como ejemplo');
     } catch (e) { out.push('EXCEPCION ' + e.message + ' | ' + e.stack); terminar(); return; }
     editarEnExcel();

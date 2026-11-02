@@ -15,6 +15,10 @@
   var MAX_INICIATIVAS = 15;
   var ESTADOS = ['En plan', 'En riesgo', 'Retrasada'];
   var ESTADOS_RIESGO = ['Retrasada', 'En riesgo'];
+  // Segmentos por unidad de negocio. Un indicador Transversal puede marcar segmentos de las dos.
+  var SEGMENTOS = { UMM: ['Hogar', 'Pospago', 'Prepago'], UMC: ['Pyme Fijo', 'Pyme Móvil'] };
+  var TIPOS_SEGMENTO = ['UMM', 'UMC', 'Transversal'];
+  function segmentosDe(tipo) { return tipo === 'Transversal' ? SEGMENTOS.UMM.concat(SEGMENTOS.UMC) : (SEGMENTOS[tipo] || []); }
 
   var PARAMS_DEFECTO = {
     semaforo: [
@@ -163,6 +167,7 @@
       .map(function (x) { return x.id; });
 
     var nombradas = inis.filter(function (x) { return !vacio(x.nombre); }).length;
+    var segmentos = repartirSegmentos(ind, real.pp);
     var faltanDatos = resultadoIniciativas.some(function (x) { return x.revision !== '' && x.revision !== 'OK'; });
 
     return {
@@ -179,8 +184,44 @@
       ranking: ranking,
       chequeoAtribucion: sumaAtrib === 0 ? 'SIN DOLORES' : (Math.abs(sumaAtrib - 1) < 0.0005 ? 'OK' : 'NO SUMA 100'),
       chequeoIniciativas: nombradas === 0 ? 'SIN INICIATIVAS' : (faltanDatos ? 'FALTAN DATOS' : 'OK'),
-      posiblePorcentaje: ind.unidad === '%' && n(ind.ejecutado) > 0 && n(ind.ejecutado) < 1 && n(ind.meta) < 1
+      posiblePorcentaje: ind.unidad === '%' && n(ind.ejecutado) > 0 && n(ind.ejecutado) < 1 && n(ind.meta) < 1,
+      segmentos: segmentos
     };
+  }
+
+  // Paso 5 (opcional) · reparto por segmento. Solo un indicador Transversal lleva pesos, y solo los que
+  // escribe el usuario: aporte = peso × puntos que mueve el indicador. Lo que no se reparte queda «sin asignar».
+  // No toca la suficiencia: con o sin pesos el resultado del indicador es el mismo.
+  function repartirSegmentos(ind, total) {
+    var transversal = ind.tipoSegmento === 'Transversal';
+    var filas = (ind.segmentos || []).map(function (s) {
+      var peso = transversal && typeof s.peso === 'number' && isFinite(s.peso) ? s.peso : null;
+      return { nombre: s.nombre, peso: peso, pp: peso === null ? null : peso * total };
+    });
+    var sumaPesos = suma(filas.map(function (f) { return f.peso || 0; }));
+    var conPesos = filas.some(function (f) { return f.peso !== null; });
+    var pasa = sumaPesos > 1 + 1e-9;
+    if (pasa) filas.forEach(function (f) { f.pp = null; });
+    return {
+      filas: filas,
+      total: total,
+      conPesos: conPesos,
+      sumaPesos: sumaPesos,
+      sinAsignar: { peso: pasa ? 0 : Math.max(0, 1 - sumaPesos), pp: pasa ? null : total - suma(filas.map(function (f) { return f.pp || 0; })) },
+      chequeo: !filas.length ? 'SIN SEGMENTO' : (pasa ? 'PASA DE 100' : (conPesos && sumaPesos < 1 - 1e-9 ? 'FALTA REPARTIR' : 'OK'))
+    };
+  }
+
+  // ¿Se pueden usar estos pesos? (fracciones de 0 a 1 o null). Devuelve '' si sí, o el motivo en palabras simples.
+  function revisarPesos(pesos) {
+    var total = 0;
+    for (var i = 0; i < pesos.length; i++) {
+      var p = pesos[i];
+      if (p === null || p === undefined) continue;
+      if (typeof p !== 'number' || !isFinite(p) || p < 0 || p > 1) return 'Cada peso va de 0 % a 100 %.';
+      total += p;
+    }
+    return total > 1 + 1e-9 ? 'Los pesos suman más de 100 %. Baja alguno.' : '';
   }
 
   // ------------------------------------------------------------------ datos
@@ -194,6 +235,7 @@
     return {
       id: nuevoId('ind-'), nombre: '', sentido: '', unidad: '%',
       ejecutado: null, meta: null, ideal: null, totalCasos: null,
+      tipoSegmento: '', segmentos: [],
       ejemplo: false, dolores: [], iniciativas: []
     };
   }
@@ -220,6 +262,13 @@
     ind.ideal = numero(o.ideal);
     ind.totalCasos = numero(o.totalCasos);
     ind.ejemplo = o.ejemplo === true;
+    // Segmentos: solo los de la unidad elegida, en el orden del catálogo; el peso solo si es Transversal
+    ind.tipoSegmento = TIPOS_SEGMENTO.indexOf(o.tipoSegmento) >= 0 ? o.tipoSegmento : '';
+    var marcados = Array.isArray(o.segmentos) ? o.segmentos : [];
+    ind.segmentos = segmentosDe(ind.tipoSegmento).map(function (nombre) {
+      var s = marcados.filter(function (x) { return x && x.nombre === nombre; })[0];
+      return s ? { nombre: nombre, peso: ind.tipoSegmento === 'Transversal' ? fraccion(s.peso) : null } : null;
+    }).filter(Boolean);
     var vistos = {};
     ind.dolores = (Array.isArray(o.dolores) ? o.dolores : []).slice(0, MAX_DOLORES).map(function (d) {
       d = d && typeof d === 'object' ? d : {};
@@ -268,12 +317,40 @@
   function normalizarDatos(o) {
     if (!o || typeof o !== 'object' || !Array.isArray(o.indicadores)) return null;
     var vistos = {};
-    var inds = o.indicadores.slice(0, 60).map(normalizarIndicador).map(function (ind) {
+    var inds = o.indicadores.map(normalizarIndicador).map(function (ind) {
       if (vistos[ind.id]) ind.id = nuevoId('ind-');
       vistos[ind.id] = true;
       return ind;
     });
     return { sel: typeof o.sel === 'string' ? o.sel : null, params: normalizarParams(o.params), indicadores: inds };
+  }
+
+  // Todo lo que se guarda en el navegador y en el respaldo .json (versión 3):
+  //   { version: 3, activo: id del cálculo guardado que está abierto (o null),
+  //     actual: el tablero que se ve (sel, params, indicadores) + base (cómo estaba al abrirlo, para saber si cambió),
+  //     calculos: [{ id, nombre, fecha, datos: { sel, params, indicadores } }] }
+  // También acepta el formato anterior (versión 2: un solo tablero) y lo migra. Devuelve null si no sirve.
+  var VERSION_ESPACIO = 3;
+  function normalizarEspacio(o) {
+    if (!o || typeof o !== 'object') return null;
+    if (!(o.version >= 3)) {
+      var viejo = normalizarDatos(o);
+      // Antes de la versión 2 los datos no traían la marca de ejemplo
+      if (viejo && !(o.version >= 2)) viejo.indicadores.forEach(function (x) { if (/^ej-/.test(x.id)) x.ejemplo = true; });
+      return viejo ? { version: VERSION_ESPACIO, activo: null, actual: viejo, base: null, calculos: [] } : null;
+    }
+    var actual = normalizarDatos(o.actual);
+    var vistos = {};
+    var calculos = (Array.isArray(o.calculos) ? o.calculos : []).map(function (c) {
+      var datos = c && typeof c === 'object' ? normalizarDatos(c.datos) : null;
+      if (!datos || !datos.indicadores.length) return null;
+      var id = typeof c.id === 'string' && c.id && !vistos[c.id] ? c.id.slice(0, 60) : nuevoId('calc-');
+      vistos[id] = true;
+      return { id: id, nombre: texto(c.nombre, 80) || 'Cálculo sin nombre', fecha: typeof c.fecha === 'string' ? c.fecha.slice(0, 40) : '', datos: datos };
+    }).filter(Boolean);
+    var activo = typeof o.activo === 'string' && vistos[o.activo] ? o.activo : null;
+    if (!actual) return calculos.length ? { version: VERSION_ESPACIO, activo: null, actual: null, base: null, calculos: calculos } : null;
+    return { version: VERSION_ESPACIO, activo: activo, actual: actual, base: typeof o.base === 'string' ? o.base : null, calculos: calculos };
   }
 
   return {
@@ -282,6 +359,13 @@
     MAX_DOLORES: MAX_DOLORES,
     MAX_INICIATIVAS: MAX_INICIATIVAS,
     ESTADOS: ESTADOS,
+    SEGMENTOS: SEGMENTOS,
+    TIPOS_SEGMENTO: TIPOS_SEGMENTO,
+    segmentosDe: segmentosDe,
+    repartirSegmentos: repartirSegmentos,
+    revisarPesos: revisarPesos,
+    normalizarEspacio: normalizarEspacio,
+    VERSION_ESPACIO: VERSION_ESPACIO,
     vacio: vacio,
     nuevoId: nuevoId,
     nuevoIndicador: nuevoIndicador,

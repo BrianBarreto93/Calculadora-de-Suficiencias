@@ -10,7 +10,9 @@
   var Motor = window.Motor;
   var Excel = window.SuficienciaExcel;
   var crearEjemplos = window.SuficienciaEjemplos;
-  var CLAVE_DATOS = 'suficiencia.datos.v1';
+  // Clave versionada: si el formato cambia, se sube la versión y Motor.normalizarEspacio migra lo anterior
+  var CLAVE_DATOS = 'suficiencia.espacio.v3';
+  var CLAVE_ANTERIOR = 'suficiencia.datos.v1';
   var CLAVE_INTRO = 'suficiencia.intro.v1';
   var SHEETJS = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
   var movimientoReducido = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -107,6 +109,8 @@
   }
   function dec(v, d) { return nf(d, d, true).format(v); }
   function pct(v, d) { return nf(d || 0, d || 0, true).format(v * 100) + ' %'; }
+  // Pesos: con los decimales que escribió el usuario (33,33 %), sin redondear a entero
+  function pctLibre(v) { return nf(0, 2, true).format(v * 100) + ' %'; }
   function editableDec(v) { return vacio(v) ? '' : nf(0, 4, false).format(v); }
   function editablePct(v) { return vacio(v) ? '' : nf(0, 2, false).format(v * 100); }
   function editableEntero(v) { return vacio(v) ? '' : nf(0, 0, true).format(v); }
@@ -147,10 +151,17 @@
   }
   function puntos(v, ind) { return dec(v, 2) + ' ' + unidadPuntos(ind); }
   function textoSentido(ind) { return ind.sentido === 'sube' ? 'Sube es mejor' : ind.sentido === 'baja' ? 'Baja es mejor' : 'Sin sentido elegido'; }
+  function textoSegmentos(ind) { return ind.segmentos.map(function (s) { return s.nombre; }).join(', '); }
   function unirLista(lista) { return lista.length < 2 ? lista.join('') : lista.slice(0, -1).join(', ') + ' y ' + lista[lista.length - 1]; }
 
   // ---------------------------------------------------------------- estado
-  var estado = cargar();
+  // estado = el tablero que se ve. calculoId: el cálculo de «Mis cálculos» del que salió (o null);
+  // base: cómo estaba al abrirlo o guardarlo, para saber si tiene cambios sin guardar.
+  var estado = { sel: null, params: null, indicadores: [], calculoId: null, base: null };
+  var calculos = [];
+  var sinAlmacen = false;
+  var falloGuardar = false;
+  aplicarEspacio(leerGuardado());
   var abiertos = {};
   var refs = null;
   var deshacer = null;
@@ -162,28 +173,59 @@
     var inds = crearEjemplos().slice(0, 1);
     return { sel: inds[0].id, params: Motor.copiarParams(Motor.PARAMS_DEFECTO), indicadores: inds };
   }
-  function cargar() {
-    var datos = null;
+  // Los datos en una forma fija (mismo orden de campos) para comparar si algo cambió
+  function textoDatos(d) { return JSON.stringify(Motor.normalizarDatos({ params: d.params, indicadores: d.indicadores })); }
+  function leerGuardado() {
+    var crudo = null;
+    var e = null;
     try {
-      var crudo = JSON.parse(window.localStorage.getItem(CLAVE_DATOS) || 'null');
-      if (crudo) datos = Motor.normalizarDatos(crudo);
-      // Los datos guardados antes de la versión 2 no traían la marca de ejemplo
-      if (datos && !(crudo.version >= 2)) datos.indicadores.forEach(function (x) { if (/^ej-/.test(x.id)) x.ejemplo = true; });
-    } catch (e) { datos = null; }
-    if (!datos || !datos.indicadores.length) datos = datosIniciales();
-    if (!datos.indicadores.some(function (x) { return x.id === datos.sel; })) datos.sel = datos.indicadores[0].id;
-    return datos;
+      crudo = window.localStorage.getItem(CLAVE_DATOS);
+      if (crudo === null) crudo = window.localStorage.getItem(CLAVE_ANTERIOR);
+    } catch (err) { sinAlmacen = true; }
+    try { e = crudo ? Motor.normalizarEspacio(JSON.parse(crudo)) : null; } catch (err) { e = null; }
+    if (!e) e = { activo: null, actual: null, base: null, calculos: [] };
+    if (!e.actual || !e.actual.indicadores.length) {
+      e.actual = datosIniciales();
+      e.activo = null;
+      e.base = textoDatos(e.actual);
+    }
+    return e;
   }
-  function guardar() {
+  function aplicarEspacio(e) {
+    calculos = e.calculos;
+    estado.sel = e.actual.sel;
+    estado.params = e.actual.params;
+    estado.indicadores = e.actual.indicadores;
+    estado.calculoId = e.activo;
+    estado.base = e.base;
+    if (!estado.indicadores.some(function (x) { return x.id === estado.sel; })) estado.sel = estado.indicadores[0].id;
+  }
+  function espacio() {
+    return {
+      version: Motor.VERSION_ESPACIO, activo: estado.calculoId, base: estado.base, calculos: calculos,
+      actual: { sel: estado.sel, params: estado.params, indicadores: estado.indicadores }
+    };
+  }
+  // Se guarda todo a cada cambio. Si el navegador no deja (lleno o bloqueado), se avisa y se sigue:
+  // el guardado automático avisa una vez; un guardado que pidió el usuario (explicito) avisa siempre.
+  // Devuelve true si quedó guardado.
+  function guardar(explicito) {
+    clearTimeout(tGuardar);
+    tGuardar = 0;
     try {
-      window.localStorage.setItem(CLAVE_DATOS, JSON.stringify({ version: 2, sel: estado.sel, params: estado.params, indicadores: estado.indicadores }));
-    } catch (e) { /* sin almacenamiento: la sesión sigue funcionando */ }
+      window.localStorage.setItem(CLAVE_DATOS, JSON.stringify(espacio()));
+      falloGuardar = false;
+      return true;
+    } catch (e) {
+      if (!falloGuardar || explicito) avisar('No se pudo guardar en este navegador (está lleno o bloqueado). Puedes seguir trabajando: usa «Descargar respaldo» en Mis cálculos para no perder nada.', null, 10000);
+      falloGuardar = true;
+      return false;
+    }
   }
   function guardarLuego() { clearTimeout(tGuardar); tGuardar = setTimeout(guardar, 250); }
-  function foto() { return JSON.stringify({ sel: estado.sel, params: estado.params, indicadores: estado.indicadores }); }
+  function foto() { return JSON.stringify(espacio()); }
   function volverA(f) {
-    var d = JSON.parse(f);
-    estado.sel = d.sel; estado.params = d.params; estado.indicadores = d.indicadores;
+    aplicarEspacio(JSON.parse(f));
     pintarTodo(true);
   }
   function actual() {
@@ -212,6 +254,16 @@
     vigilar: $('#vigilar'),
     vigilarCuenta: $('#vigilar-cuenta'),
     aportes: $('#aportes'),
+    panelSeg: $('#panel-segmentos'),
+    segAyuda: $('#seg-ayuda'),
+    tablaSeg: $('#tabla-seg'),
+    calculos: $('#menu-calculos'),
+    dlgPregunta: $('#dlg-pregunta'),
+    pregTitulo: $('#preg-titulo'),
+    pregTexto: $('#preg-texto'),
+    pregCampo: $('#preg-campo'),
+    pregNombre: $('#preg-nombre'),
+    pregBotones: $('#preg-botones'),
     pasos: $('#pasos'),
     taller: $('#taller-cuerpo'),
     ajustes: $('#ajustes-cuerpo'),
@@ -501,8 +553,8 @@
         tarjeta(ind, Motor.calcular(ind, estado.params), arte, arte ? 0 : nuevas++),
         h('button', { class: 'tarjeta-borrar', type: 'button', title: 'Eliminar indicador', 'aria-label': 'Eliminar el indicador «' + nombreDe(ind) + '»', data: { accion: 'eliminar', id: ind.id } }, icono('borrar'))));
     });
-    D.riel.appendChild(h('button', { class: 'tarjeta tarjeta--nueva' + (primera ? ' entra' : ''), type: 'button', style: primera ? '--i:' + nuevas : null, data: { accion: 'nuevo-indicador' } },
-      icono('plus'), h('b', null, 'Nuevo cálculo'), h('span', null, 'Borra todo y empieza de cero')));
+    D.riel.appendChild(h('button', { class: 'tarjeta tarjeta--nueva' + (primera ? ' entra' : ''), type: 'button', style: primera ? '--i:' + nuevas : null, data: { accion: 'agregar-indicador' } },
+      h('b', null, '+ Agregar indicador'), h('span', null, 'Suma otro indicador a este tablero')));
     var k = estado.indicadores.length;
     D.rielCuenta.textContent = k + (k === 1 ? ' indicador' : ' indicadores');
     var sel = tarjetaDe(estado.sel);
@@ -541,6 +593,7 @@
     if (!vacio(ind.ejecutado)) meta.push(h('span', { class: 'pildora' }, 'Hoy ', h('b', null, valorConUnidad(ind.ejecutado, ind))));
     if (!vacio(ind.meta)) meta.push(h('span', { class: 'pildora' }, 'Meta 2027 ', h('b', null, valorConUnidad(ind.meta, ind))));
     if (r.brecha > 0) meta.push(h('span', { class: 'pildora' }, 'Brecha ', h('b', null, puntos(r.brecha, ind))));
+    if (ind.segmentos.length) meta.push(h('span', { class: 'pildora' }, ind.tipoSegmento + ' ', h('b', null, textoSegmentos(ind))));
     fijar(D.metaLinea, meta);
 
     fijar(D.frase, frase(ind, r));
@@ -555,6 +608,24 @@
     pintarLeyenda(ind, r, entrando);
     pintarVigilar(ind, r);
     pintarAportes(ind, r, entrando);
+    pintarSegmentosResumen(ind, r);
+  }
+
+  // Tabla del reparto por segmento (solo indicadores Transversales): segmento | peso | aporte, sin asignar y total
+  function pintarSegmentosResumen(ind, r) {
+    var rs = r.segmentos;
+    D.panelSeg.hidden = !(ind.tipoSegmento === 'Transversal' && rs.filas.length);
+    if (D.panelSeg.hidden) return;
+    var pasa = rs.chequeo === 'PASA DE 100';
+    D.segAyuda.textContent = pasa ? 'Los pesos suman ' + pctLibre(rs.sumaPesos) + ': deben sumar máximo 100 %. Corrígelos en el paso 1.'
+      : 'Aporte = peso del segmento × lo que mueve el indicador (' + puntos(rs.total, ind) + '). Ej.: si mueve 3 pp y Hogar pesa 60 %, Hogar aporta 1,8 pp.';
+    var celdaPp = function (v) { return v === null ? '—' : puntos(v, ind); };
+    var filas = rs.filas.map(function (f) {
+      return h('tr', null, h('th', { scope: 'row' }, f.nombre), h('td', null, f.peso === null ? 'No definido' : pctLibre(f.peso)), h('td', null, celdaPp(f.pp)));
+    });
+    filas.push(h('tr', { class: 'seg-sin' }, h('th', { scope: 'row' }, 'Sin asignar'), h('td', null, pasa ? '—' : pctLibre(rs.sinAsignar.peso)), h('td', null, celdaPp(rs.sinAsignar.pp))));
+    filas.push(h('tr', { class: 'seg-total' }, h('th', { scope: 'row' }, 'Total'), h('td', null, pctLibre(pasa ? rs.sumaPesos : 1)), h('td', null, puntos(rs.total, ind))));
+    fijar(D.tablaSeg, h('thead', null, h('tr', null, h('th', { scope: 'col' }, 'Segmento'), h('th', { scope: 'col' }, 'Peso'), h('th', { scope: 'col' }, 'Aporte'))), h('tbody', null, filas));
   }
   // Un destello en el anillo cuando la suficiencia alcanza la meta
   function celebrar() {
@@ -676,6 +747,8 @@
       lista.push({ tono: 'neutro', icono: 'info', texto: ['Completa el ', h('strong', null, 'paso 1'), ': hoy, meta 2027 y si es mejor que suba o que baje.'], ir: { tipo: 'paso', id: '1' } });
       return lista;
     }
+    if (!ind.segmentos.length) lista.push({ tono: 'alerta', icono: 'info', texto: ['Marca al menos un ', h('strong', null, 'segmento'), ' en el paso 1 (por ejemplo, Hogar o Pospago).'], ir: { tipo: 'paso', id: '1' } });
+    if (r.segmentos.chequeo === 'PASA DE 100') lista.push({ tono: 'critico', icono: 'triangulo', texto: ['Los pesos de los segmentos suman ', h('strong', null, pctLibre(r.segmentos.sumaPesos)), '. Deben sumar máximo 100 %.'], ir: { tipo: 'paso', id: '1' } });
     if (r.posiblePorcentaje) lista.push({ tono: 'alerta', icono: 'triangulo', texto: ['Revisa hoy y la meta: parece que escribiste el símbolo %. Si tu valor es 2,8 %, escribe solo 2,8.'], ir: { tipo: 'paso', id: '1' } });
     if (r.brecha === 0) return lista;
     if (r.chequeoAtribucion === 'SIN DOLORES') lista.push({ tono: 'neutro', icono: 'info', texto: ['Agrega los dolores y sus casos en el ', h('strong', null, 'paso 2'), '.'], ir: { tipo: 'paso', id: '2' } });
@@ -828,12 +901,57 @@
       h('div', { class: 'campo c-meta' }, etq('Meta 2027', null, ids.m),
         conUnidad(entrada('decimal', ind.meta, { id: ids.m, placeholder: 'Ej.: 2,0', data: { campo: 'meta' } }), unidad, refs.unidades)),
       h('div', { class: 'campo c-ideal' }, etq('Valor ideal', 'ideal', ids.i), conUnidad(refs.ideal, unidad, refs.unidades)),
+      campoSegmento(ind),
       h('div', { class: 'campo c-nombre' }, refs.pista1));
     refs.segmentos = segs;
     refs.bala = h('div', { class: 'bala' });
     hj.cuerpo.appendChild(h('div', { class: 'paso1' }, campos, refs.bala));
     refs.paso1 = hj;
     return hj.sec;
+  }
+
+  // Segmento: primero la unidad (UMM, UMC o Transversal) y luego los segmentos. Transversal admite los de las dos
+  // y un peso opcional por segmento.
+  function campoSegmento(ind) {
+    var idT = idUnico();
+    refs.tiposSeg = h('div', { class: 'segmentos', role: 'group', 'aria-labelledby': idT },
+      Motor.TIPOS_SEGMENTO.map(function (t) { return h('button', { type: 'button', 'aria-pressed': String(ind.tipoSegmento === t), data: { accion: 'tipo-segmento', valor: t } }, t); }));
+    refs.segLista = h('div', { class: 'seg-lista' });
+    refs.segPista = h('p', { class: 'pista' });
+    refs.segAviso = h('p', { class: 'pista' });
+    refs.segError = h('p', { class: 'pista pista--alerta', role: 'alert', hidden: true });
+    pintarSegmentos(ind);
+    return h('div', { class: 'campo c-segmento' }, h('div', { class: 'etq', id: idT }, '¿De qué segmento es el indicador?'),
+      refs.tiposSeg, refs.segPista, refs.segLista, refs.segAviso, refs.segError);
+  }
+  function buscarSegmento(ind, nombre) { return ind.segmentos.filter(function (s) { return s.nombre === nombre; })[0] || null; }
+  function pintarSegmentos(ind) {
+    var trans = ind.tipoSegmento === 'Transversal';
+    var foco = document.activeElement && refs.segLista.contains(document.activeElement) ? document.activeElement.value : null;
+    refs.segAportes = {};
+    refs.segError.hidden = true;
+    if (!ind.tipoSegmento) { refs.segLista.replaceChildren(); return; }
+    fijar(refs.segLista, (trans ? ['UMM', 'UMC'] : [ind.tipoSegmento]).map(function (g) {
+      return h('div', { class: 'seg-grupo', role: 'group', 'aria-label': 'Segmentos ' + g }, trans ? h('span', { class: 'seg-unidad' }, g) : null,
+        Motor.SEGMENTOS[g].map(function (nombre) {
+          var s = buscarSegmento(ind, nombre);
+          var id = idUnico('seg');
+          var fila = h('div', { class: 'seg-fila' + (s ? ' marcado' : '') },
+            h('label', { class: 'seg-marca', for: id }, h('input', { type: 'checkbox', id: id, value: nombre, checked: !!s, data: { campo: 'segmento' } }), nombre));
+          if (trans && s) {
+            var idp = idUnico('peso');
+            refs.segAportes[nombre] = h('span', { class: 'seg-aporte' });
+            fila.appendChild(h('div', { class: 'seg-peso' },
+              h('label', { class: 'seg-peso-etq', for: idp }, 'Peso del segmento (%)'),
+              conUnidad(entrada('pct', s.peso, { id: idp, placeholder: 'Opcional', data: { campo: 'peso', segmento: nombre } }), '%'),
+              refs.segAportes[nombre]));
+          }
+          return fila;
+        }));
+    }));
+    if (trans) refs.segLista.appendChild(h('p', { class: 'pista seg-ayuda' }, 'El peso es opcional. Aporte = peso × lo que mueve el indicador. Ej.: si el indicador mueve 3 pp y Hogar pesa 60 %, Hogar aporta 1,8 pp.'));
+    var vuelve = foco && $$('input[data-campo="segmento"]', refs.segLista).filter(function (x) { return x.value === foco; })[0];
+    if (vuelve) vuelve.focus();
   }
 
   function paso2(ind) {
@@ -896,7 +1014,7 @@
     var hj = hoja(3, '¿Qué vas a hacer?', 'En cada dolor escribe qué % resuelve la iniciativa si se hace completa (vacío = 0 %). Luego ajusta cuánto estará ejecutado en 2027.', 'paso-3');
     // Ancho mínimo de la tabla = suma de los mínimos de sus columnas; si no cabe, se desliza de lado.
     var nd = Math.max(1, ind.dolores.length);
-    var matriz = h('div', { class: 'matriz', style: '--nd:' + nd + ';--min-ancho:' + (840 + 68 * nd) + 'px' });
+    var matriz = h('div', { class: 'matriz', style: '--nd:' + nd + ';--min-ancho:' + (706 + 68 * nd) + 'px' });
     var cab = h('div', { class: 'matriz-cab' }, h('span', null, 'N°'), h('span', null, 'Iniciativa', botonAyuda('efectividad', 'efectividad')));
     if (ind.dolores.length) {
       ind.dolores.forEach(function (d, j) {
@@ -909,7 +1027,6 @@
       cab.appendChild(h('span', null, 'Dolores'));
     }
     cab.appendChild(h('span', null, 'Ejecución a 2027', botonAyuda('ejecucion', 'ejecución')));
-    cab.appendChild(h('span', null, 'Estado'));
     cab.appendChild(h('span', null, 'Aporte esperado', botonAyuda('aporte', 'aporte')));
     cab.appendChild(h('span'));
     matriz.appendChild(cab);
@@ -945,8 +1062,6 @@
       style: '--v:' + (ejec * 100) + '%', 'aria-label': 'Ejecución a 2027 de la iniciativa ' + (i + 1), data: { campo: 'ejecucion', ini: x.id, tipo: 'rango' }
     });
     q.ejecIn = entrada('pct', x.ejecucion, { class: 'entrada', placeholder: '—', 'aria-label': 'Ejecución a 2027 de la iniciativa ' + (i + 1) + ' en porcentaje', data: { campo: 'ejecucion', ini: x.id } });
-    var sel = h('select', { class: 'entrada entrada--chica', 'aria-label': 'Estado de la iniciativa ' + (i + 1), data: { campo: 'estado', ini: x.id, tipo: 'texto' } },
-      Motor.ESTADOS.map(function (e) { return h('option', { value: e, selected: e === x.estado }, e); }));
     q.apValor = h('b');
     q.apPct = h('small');
     q.apBarra = h('span', { class: 'barra-fina', 'aria-hidden': 'true' }, h('i'));
@@ -966,7 +1081,6 @@
         entradaArea(x.nombre, { id: ids.n, placeholder: 'Ej.: Resolución en el primer contacto', maxlength: 120, data: { campo: 'nombre', ini: x.id } }), q.revision),
       celdas,
       h('div', { class: 'i-ejec' }, h('span', { class: 'et-movil' }, 'Ejecución a 2027'), h('div', { class: 'ejec-ctl' }, q.rango, conUnidad(q.ejecIn, '%'))),
-      h('div', { class: 'i-estado' }, h('span', { class: 'et-movil' }, 'Estado'), sel),
       h('div', { class: 'i-aporte' }, h('span', { class: 'et-movil' }, 'Aporte con la ejecución esperada'),
         h('div', { class: 'ap-linea' }, q.apValor, q.apPct), q.apBarra, h('div', { class: 'ap-mini' }, q.apChip, q.apFalla)),
       h('div', { class: 'i-mas' },
@@ -989,6 +1103,21 @@
     refs.pista1.textContent = pista;
     refs.pista1.className = 'pista' + (alerta ? ' pista--alerta' : '');
     refs.pista1.hidden = !pista;
+    // segmento
+    $$('button', refs.tiposSeg).forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.valor === ind.tipoSegmento)); });
+    refs.tiposSeg.classList.toggle('sin-eleccion', !ind.segmentos.length);
+    refs.segPista.textContent = !ind.tipoSegmento ? 'Elige UMM, UMC o Transversal (Transversal deja marcar segmentos de las dos).'
+      : (!ind.segmentos.length ? 'Marca al menos un segmento.' : '');
+    refs.segPista.className = 'pista' + (ind.segmentos.length ? '' : ' pista--alerta');
+    refs.segPista.hidden = !refs.segPista.textContent;
+    var rs = r.segmentos;
+    rs.filas.forEach(function (f) {
+      var el = refs.segAportes[f.nombre];
+      if (el) el.textContent = f.pp !== null ? 'Aporta ' + puntos(f.pp, ind) : (f.peso === null ? 'Sin peso (es opcional)' : '');
+    });
+    refs.segAviso.textContent = rs.chequeo === 'FALTA REPARTIR' ? 'Falta repartir ' + pctLibre(1 - rs.sumaPesos) + ' (' + puntos(rs.sinAsignar.pp, ind) + ' sin asignar). No es obligatorio.' : '';
+    refs.segAviso.hidden = !refs.segAviso.textContent;
+    if (rs.chequeo === 'PASA DE 100') { refs.segError.textContent = 'Los pesos suman ' + pctLibre(rs.sumaPesos) + '. Deben sumar máximo 100 %: baja alguno.'; refs.segError.hidden = false; }
     pintarBala(ind, r);
 
     // paso 2
@@ -1098,6 +1227,7 @@
     if (!ind.sentido) f1.push('qué es mejor');
     if (vacio(ind.ejecutado)) f1.push('hoy');
     if (vacio(ind.meta)) f1.push('la meta');
+    if (!ind.segmentos.length) f1.push('el segmento');
     var p2ok = ind.dolores.some(function (d) { return d.nombre; }) && n(ind.totalCasos) > 0 && r.chequeoAtribucion === 'OK';
     var falta2 = !ind.dolores.length ? 'Sin dolores' : (n(ind.totalCasos) === 0 ? 'Faltan los casos analizados' : (r.chequeoAtribucion !== 'OK' ? 'Revisa el impacto del dolor' : 'Faltan nombres'));
     return [
@@ -1144,6 +1274,8 @@
     var t = e.target;
     var campo = t.dataset ? t.dataset.campo : null;
     if (!campo) return;
+    if (campo === 'segmento') { if (e.type === 'change') marcarSegmento(t.value, t.checked); return; }
+    if (campo === 'peso') { cambiarPeso(t, e.type === 'change'); return; }
     var ind = actual();
     var tipo = t.dataset.tipo || 'texto';
     var v;
@@ -1179,7 +1311,11 @@
     var t = e.target;
     if (!t.dataset || !t.dataset.campo) return;
     var tipo = t.dataset.tipo || 'texto';
-    if (t.getAttribute('aria-invalid') === 'true') return;
+    if (t.getAttribute('aria-invalid') === 'true') {
+      if (t.dataset.campo !== 'peso') return;
+      // Un peso rechazado vuelve al último aceptado (el mensaje sigue a la vista): lo que se ve es lo que se calcula
+      t.removeAttribute('aria-invalid');
+    }
     var ind = actual();
     var obj = t.dataset.ini ? buscar(ind.iniciativas, t.dataset.ini) : (t.dataset.dolor ? buscar(ind.dolores, t.dataset.dolor) : ind);
     if (!obj) return;
@@ -1189,24 +1325,215 @@
       return;
     }
     if (tipo === 'rango' || tipo === 'texto') return;
-    var valor = t.dataset.campo === 'efectividad' ? obj.efectividad[t.dataset.dolor] : obj[t.dataset.campo];
+    var valor = t.dataset.campo === 'efectividad' ? obj.efectividad[t.dataset.dolor]
+      : (t.dataset.campo === 'peso' ? (buscarSegmento(ind, t.dataset.segmento) || {}).peso : obj[t.dataset.campo]);
     t.value = formatoEditable(tipo, valor);
   }
 
-  // ---------------------------------------------------------------- acciones
-  // Nuevo cálculo de suficiencia: borra todo lo que había y deja un indicador vacío para definirlo desde cero.
-  // Se puede deshacer por unos segundos.
-  function nuevoIndicador() {
+  // ---------------------------------------------------------------- segmento
+  function cambiarTipoSegmento(tipo) {
+    var ind = actual();
+    if (ind.tipoSegmento === tipo) return;
     var antes = foto();
-    var habia = estado.indicadores.length;
+    var permitidos = Motor.segmentosDe(tipo);
+    var quedan = ind.segmentos.filter(function (s) { return permitidos.indexOf(s.nombre) >= 0; });
+    var pierde = quedan.length < ind.segmentos.length || (tipo !== 'Transversal' && ind.segmentos.some(function (s) { return s.peso !== null; }));
+    ind.tipoSegmento = tipo;
+    ind.segmentos = quedan.map(function (s) { return { nombre: s.nombre, peso: tipo === 'Transversal' ? s.peso : null }; });
+    pintarSegmentos(ind);
+    recalcular(false);
+    if (pierde) conDeshacer('Cambiaste a ' + tipo + ': se quitaron los segmentos o pesos que no aplican.', antes);
+  }
+  function marcarSegmento(nombre, si) {
+    var ind = actual();
+    var s = buscarSegmento(ind, nombre);
+    if (si && !s) {
+      var orden = Motor.segmentosDe(ind.tipoSegmento);
+      ind.segmentos.push({ nombre: nombre, peso: null });
+      ind.segmentos.sort(function (a, b) { return orden.indexOf(a.nombre) - orden.indexOf(b.nombre); });
+    } else if (!si && s) {
+      var antes = foto();
+      ind.segmentos.splice(ind.segmentos.indexOf(s), 1);
+      if (s.peso !== null) conDeshacer('Quitaste «' + nombre + '» y su peso de ' + pctLibre(s.peso) + '.', antes);
+    }
+    pintarSegmentos(ind);
+    recalcular(false);
+  }
+  // El peso es opcional (vacío = sin peso). No se acepta si la suma de los pesos pasa de 100 %.
+  // Mientras se escribe solo se revisa; se guarda al confirmar (change), para no guardar números a medio escribir.
+  function cambiarPeso(t, aplicar) {
+    var ind = actual();
+    var s = buscarSegmento(ind, t.dataset.segmento);
+    if (!s) return;
+    var v = leerNumero(t.value);
+    var motivo = Number.isNaN(v) ? 'Escribe solo el número. Ej.: 60' : '';
+    if (!motivo && v !== null) v = v / 100;
+    var suma = function (lista) { return lista.reduce(function (a, p) { return a + (p || 0); }, 0); };
+    var nuevos = ind.segmentos.map(function (x) { return x === s ? v : x.peso; });
+    if (!motivo) motivo = Motor.revisarPesos(nuevos);
+    // Si ya venían pasados de 100 % (de un Excel o un respaldo), bajar un peso siempre se acepta
+    if (motivo && v !== null && v >= 0 && v <= 1 && suma(nuevos) <= suma(ind.segmentos.map(function (x) { return x.peso; })) + 1e-9) motivo = '';
+    refs.segError.textContent = motivo + (motivo && aplicar ? ' No se guardó: queda el peso anterior.' : '');
+    refs.segError.hidden = !motivo;
+    if (motivo) { t.setAttribute('aria-invalid', 'true'); return; }
+    t.removeAttribute('aria-invalid');
+    if (!aplicar) return;
+    s.peso = v;
+    recalcular(false);
+  }
+
+  // ---------------------------------------------------------------- acciones
+  // + Agregar indicador: suma uno vacío al mismo tablero y deja el taller listo para llenarlo
+  function agregarIndicador() {
     var ind = Motor.nuevoIndicador();
-    estado.indicadores = [ind];
+    estado.indicadores.push(ind);
     estado.sel = ind.id;
     abiertos = {};
     pintarTodo(true);
-    var p1 = $('#paso-1');
-    irA(p1, p1 ? $('input', p1) : null);
-    conDeshacer('Empezaste un cálculo nuevo desde cero' + (habia ? ': se borr' + (habia === 1 ? 'ó el indicador que había' : 'aron los ' + habia + ' indicadores que había') : '') + '. Empieza por el paso 1.', antes, 12000);
+    irAlPaso1();
+    avisar('Agregaste un indicador nuevo. Llena sus 3 pasos en el taller.');
+  }
+  function irAlPaso1() { var p1 = $('#paso-1'); irA(p1, p1 ? $('input', p1) : null); }
+
+  // ---------------------------------------------------------------- Mis cálculos
+  // El tablero que se ve se guarda solo a cada cambio. «Guardar» lo copia a Mis cálculos para volver a abrirlo.
+  function calculoDe(id) { return id ? buscar(calculos, id) : null; }
+  function hayCambios() { return textoDatos(estado) !== estado.base; }
+  function fechaCorta(d) { return d.toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' }); }
+  function nombreSugerido() {
+    var propios = estado.indicadores.filter(function (x) { return x.nombre && !x.ejemplo; });
+    var nombre = propios.length ? propios[0].nombre + (propios.length > 1 ? ' y ' + (propios.length - 1) + ' más' : '') : 'Mi cálculo';
+    return (nombre + ' · ' + fechaCorta(new Date())).slice(0, 80);
+  }
+  function guardarCalculo(nombre) {
+    var c = calculoDe(estado.calculoId);
+    if (!c) { c = { id: Motor.nuevoId('calc-'), nombre: '' }; calculos.push(c); estado.calculoId = c.id; }
+    c.nombre = String(nombre || '').trim().slice(0, 80) || c.nombre || nombreSugerido();
+    c.fecha = new Date().toISOString();
+    c.datos = JSON.parse(JSON.stringify({ sel: estado.sel, params: estado.params, indicadores: estado.indicadores }));
+    estado.base = textoDatos(estado);
+    // Si el navegador no dejó guardar, ya se avisó: quien llama no debe decir «Guardaste»
+    return guardar(true) ? c : null;
+  }
+  function abrirTablero(datos, id) {
+    estado.indicadores = JSON.parse(JSON.stringify(datos.indicadores));
+    estado.params = Motor.copiarParams(datos.params);
+    estado.sel = estado.indicadores.some(function (x) { return x.id === datos.sel; }) ? datos.sel : estado.indicadores[0].id;
+    estado.calculoId = id || null;
+    estado.base = textoDatos(estado);
+    abiertos = {};
+    pintarTodo(true);
+    guardar();
+  }
+  // Si el tablero tiene cambios sin guardar, pregunta antes de cambiarlo. seguir(antes, guardado):
+  // antes = cómo estaba todo (para Deshacer si eligió «No guardar»); guardado = el cálculo que se guardó.
+  function pedirGuardar(seguir) {
+    if (!hayCambios()) { seguir(null, null); return; }
+    var c = calculoDe(estado.calculoId);
+    preguntar({
+      titulo: '¿Guardar los cambios del tablero actual?',
+      texto: c ? 'Se actualiza «' + c.nombre + '» en Mis cálculos.' : 'Quedará en Mis cálculos para abrirlo cuando quieras.',
+      campo: c ? null : nombreSugerido(),
+      botones: [{ valor: 'guardar', txt: 'Guardar', clase: 'btn--rojo' }, { valor: 'no', txt: 'No guardar' }, { valor: 'cancelar', txt: 'Cancelar' }]
+    }, function (r, nombre) {
+      if (r === 'no') { seguir(foto(), null); return; }
+      if (r !== 'guardar') return;
+      var g = guardarCalculo(nombre);
+      // Sin guardar de verdad no se cambia de tablero: así no se pierde lo que había
+      if (g) seguir(null, g);
+    });
+  }
+  function textoGuardado(g) { return g ? 'Guardaste «' + g.nombre + '» en Mis cálculos. ' : ''; }
+  // Nuevo cálculo: abre un tablero nuevo con un indicador vacío
+  function nuevoCalculo() {
+    pedirGuardar(function (antes, guardado) {
+      var ind = Motor.nuevoIndicador();
+      abrirTablero({ sel: ind.id, params: estado.params, indicadores: [ind] }, null);
+      irAlPaso1();
+      var txt = textoGuardado(guardado) + 'Empezaste un cálculo nuevo: llena el paso 1.';
+      if (antes) conDeshacer(txt + ' No guardaste el anterior.', antes, 12000);
+      else avisar(txt, null, 7000);
+    });
+  }
+  function abrirCalculo(id) {
+    if (id === estado.calculoId && !hayCambios()) return;
+    pedirGuardar(function (antes, guardado) {
+      var c = calculoDe(id);
+      if (!c) return;
+      abrirTablero(c.datos, c.id);
+      window.scrollTo({ top: 0, behavior: movimientoReducido.matches ? 'auto' : 'smooth' });
+      var txt = textoGuardado(guardado) + 'Abriste «' + c.nombre + '».';
+      if (antes) conDeshacer(txt, antes, 12000);
+      else avisar(txt);
+    });
+  }
+  function guardarDesdeMenu() {
+    var avisarSi = function (g) { if (g) avisar(textoGuardado(g)); };
+    if (calculoDe(estado.calculoId)) { avisarSi(guardarCalculo()); return; }
+    preguntar({
+      titulo: 'Guardar en Mis cálculos', texto: 'Ponle un nombre para encontrarlo después.', campo: nombreSugerido(),
+      botones: [{ valor: 'guardar', txt: 'Guardar', clase: 'btn--rojo' }, { valor: 'cancelar', txt: 'Cancelar' }]
+    }, function (r, nombre) { if (r === 'guardar') avisarSi(guardarCalculo(nombre)); });
+  }
+  function eliminarCalculo(id) {
+    var c = calculoDe(id);
+    if (!c) return;
+    preguntar({
+      titulo: '¿Eliminar «' + c.nombre + '»?', texto: 'Se borra de Mis cálculos y no se puede recuperar. El tablero que estás viendo no cambia.',
+      botones: [{ valor: 'eliminar', txt: 'Eliminar', clase: 'btn--rojo' }, { valor: 'cancelar', txt: 'Cancelar' }]
+    }, function (r) {
+      if (r !== 'eliminar') return;
+      calculos.splice(calculos.indexOf(c), 1);
+      // El tablero sigue abierto, pero ya no está guardado en ningún lado
+      if (estado.calculoId === id) { estado.calculoId = null; estado.base = null; }
+      if (guardar(true)) avisar('Eliminaste «' + c.nombre + '» de Mis cálculos.');
+    });
+  }
+  function renombrarCalculo(entradaNombre) {
+    var c = calculoDe(entradaNombre.dataset.calculo);
+    if (!c) return;
+    var nombre = entradaNombre.value.trim().slice(0, 80);
+    if (!nombre) { entradaNombre.value = c.nombre; return; }
+    c.nombre = nombre;
+    if (guardar(true)) avisar('Renombraste el cálculo: «' + nombre + '».');
+  }
+  function pintarCalculos() {
+    var c = calculoDe(estado.calculoId);
+    var cambios = hayCambios();
+    var lista = calculos.slice().sort(function (a, b) { return a.fecha < b.fecha ? 1 : (a.fecha > b.fecha ? -1 : 0); });
+    fijar(D.calculos,
+      h('div', { class: 'calc-cab' },
+        h('p', null, h('small', null, 'Estás viendo'), h('b', null, c ? c.nombre : 'Cálculo sin guardar'),
+          h('small', { class: cambios ? 'calc-cambios' : '' }, cambios ? 'Tiene cambios sin guardar' : 'Todo guardado')),
+        h('button', { class: 'btn btn--rojo', type: 'button', data: { accion: 'guardar-calculo' } }, 'Guardar')),
+      lista.length ? h('ul', { class: 'calc-lista', 'aria-label': 'Cálculos guardados' }, lista.map(function (x) {
+        var id = idUnico('calc');
+        var fecha = new Date(x.fecha);
+        return h('li', { class: 'calc-item' + (x.id === estado.calculoId ? ' abierto' : '') },
+          h('label', { class: 'sr', for: id }, 'Nombre del cálculo'),
+          h('input', { class: 'calc-nombre', id: id, type: 'text', maxlength: 80, autocomplete: 'off', value: x.nombre, data: { calculo: x.id } }),
+          h('small', null, (x.fecha && !isNaN(fecha) ? 'Guardado el ' + fechaLarga(fecha) : 'Sin fecha') + ' · ' + x.datos.indicadores.length + (x.datos.indicadores.length === 1 ? ' indicador' : ' indicadores')),
+          h('div', { class: 'calc-botones' },
+            x.id === estado.calculoId ? h('span', { class: 'calc-abierto' }, 'Abierto') : h('button', { class: 'btn-chico-claro', type: 'button', data: { accion: 'abrir-calculo', id: x.id } }, 'Abrir'),
+            h('button', { class: 'btn-icono peligro', type: 'button', 'aria-label': 'Eliminar «' + x.nombre + '»', title: 'Eliminar', data: { accion: 'eliminar-calculo', id: x.id } }, icono('borrar'))));
+      })) : h('p', { class: 'calc-vacio' }, 'Aún no tienes cálculos guardados. Pulsa «Guardar» o, al empezar un «Nuevo cálculo», elige guardar el actual.'),
+      h('hr'),
+      h('button', { type: 'button', data: { accion: 'descargar-respaldo' } }, icono('bajar'), 'Descargar respaldo (.json)'),
+      h('button', { type: 'button', data: { accion: 'cargar-respaldo' } }, icono('subir'), 'Cargar respaldo (.json)'),
+      h('p', { class: 'calc-nota' }, 'Todo se guarda solo en este navegador y en esta dirección. Para pasarlo a otro equipo, o del archivo descargado a la página publicada, descarga un respaldo y cárgalo allá.'));
+  }
+
+  // Pregunta con botones (y un campo de nombre si hace falta). listo(valor del botón, nombre); Esc = 'cancelar'.
+  var alResponder = null;
+  function preguntar(op, listo) {
+    D.pregTitulo.textContent = op.titulo;
+    D.pregTexto.textContent = op.texto || '';
+    D.pregCampo.hidden = !op.campo;
+    D.pregNombre.value = op.campo || '';
+    fijar(D.pregBotones, op.botones.map(function (b) { return h('button', { class: 'btn' + (b.clase ? ' ' + b.clase : ''), type: 'submit', value: b.valor }, b.txt); }));
+    alResponder = listo;
+    abrirDialogo(D.dlgPregunta);
+    if (op.campo) { D.pregNombre.focus(); D.pregNombre.select(); }
   }
   // Muestra el ejemplo lleno; si lo borraste, lo vuelve a agregar sin tocar tus cálculos
   function verEjemplo() {
@@ -1449,10 +1776,11 @@
     a.remove();
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
-  function exportar() {
-    var datos = { app: 'Suficiencia 2027', version: 2, exportado: new Date().toISOString(), sel: estado.sel, params: estado.params, indicadores: estado.indicadores };
-    descargar(new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' }), 'suficiencia-' + fechaISO(new Date()) + '.json');
-    avisar('Guardaste una copia con ' + estado.indicadores.length + ' indicadores.');
+  // Respaldo: todo lo de este navegador (Mis cálculos y el tablero actual) en un .json
+  function descargarRespaldo() {
+    var datos = Object.assign({ app: 'Suficiencia 2027', tipo: 'respaldo', exportado: new Date().toISOString() }, espacio());
+    descargar(new Blob([JSON.stringify(datos, null, 2)], { type: 'application/json' }), 'suficiencia-respaldo-' + fechaISO(new Date()) + '.json');
+    avisar('Descargaste el respaldo: el tablero actual y ' + calculos.length + (calculos.length === 1 ? ' cálculo guardado' : ' cálculos guardados') + '. Guárdalo en una carpeta segura.');
   }
 
   // Exportar a Excel: primero se eligen los indicadores. Si ya tienes cálculos propios, el ejemplo queda sin marcar.
@@ -1570,7 +1898,7 @@
 
   function hojaResumen(datos, ahora) {
     var X = new Excel.Hoja('Resumen');
-    X.anchos = [5, 42, 12, 11, 11, 11, 13, 15, 16, 14, 12, 13, 9, 11, 9, 13];
+    X.anchos = [5, 42, 20, 12, 11, 11, 11, 13, 15, 16, 14, 12, 13, 9, 11, 9, 13];
     X.color = XC.noche;
     X.horizontal = true;
     var ultima = X.anchos.length - 1;
@@ -1584,12 +1912,12 @@
       'Suficiencia = puntos que recuperan tus iniciativas ÷ brecha a la meta. 100 % o más quiere decir que alcanza.',
       '«Esperada» usa el % de ejecución que escribiste. «Si todo se cumple» supone todas las iniciativas al 100 %.',
       '«Mueve el indicador» = cuántos puntos se mueve el indicador con tus iniciativas (suficiencia × brecha).',
-      'Cada indicador tiene su hoja con todo el detalle: resultado, alertas, dolores e iniciativas. Usa «Ver hoja ›».',
+      'Cada indicador tiene su hoja con todo el detalle: resultado, el cálculo paso a paso, alertas, segmento, dolores e iniciativas. Usa «Ver hoja ›».',
       'Celdas azules = datos que escribes. Celdas grises = resultados. Si cambias datos, abre el archivo en la calculadora (Importar Excel) para recalcular.'
     ].forEach(function (t) { X.poner(f++, 1, '•  ' + t); });
     f = xBanda(X, f + 1, 'COMPARATIVO DE INDICADORES', ultima);
-    f = xCabecera(X, f, ['N°', 'Indicador', '¿Qué es mejor?', 'Hoy', 'Meta 2027', 'Brecha', 'Suficiencia esperada', 'Semáforo', 'Mueve el indicador',
-      'Así quedarías en 2027', 'Te faltaría', 'Si todo se cumple', 'Dolores', 'Iniciativas', 'Alertas', 'Detalle'].map(function (t, c) { return [c, t, c === 1]; }));
+    f = xCabecera(X, f, ['N°', 'Indicador', 'Segmento', '¿Qué es mejor?', 'Hoy', 'Meta 2027', 'Brecha', 'Suficiencia esperada', 'Semáforo', 'Mueve el indicador',
+      'Así quedarías en 2027', 'Te faltaría', 'Si todo se cumple', 'Dolores', 'Iniciativas', 'Alertas', 'Detalle'].map(function (t, c) { return [c, t, c === 1 || c === 2]; }));
     datos.forEach(function (x, k) {
       var ind = x.ind;
       var r = x.r;
@@ -1598,24 +1926,26 @@
       var cumple = r.real.semaforo === 'META CUMPLIDA';
       var fPts = xFormato(unidadPuntos(ind));
       var fVal = xFormato(ind.unidad);
+      var seg = ind.segmentos.length ? ind.tipoSegmento + ' · ' + textoSegmentos(ind) : 'Sin segmento';
       X.poner(f, 0, k + 1, xCalc(null, { h: 'center', negrita: true }));
       X.poner(f, 1, nombreDe(ind) + (ind.ejemplo ? '  (ejemplo)' : ''), xCalc(null, { negrita: true, ajustar: true }));
-      X.poner(f, 2, ind.sentido === 'sube' ? '↑ Que suba' : (ind.sentido === 'baja' ? '↓ Que baje' : '—'), xCalc(null, { h: 'center' }));
-      X.poner(f, 3, vacio(ind.ejecutado) ? '—' : ind.ejecutado, xCalc(fVal, { h: 'center' }));
-      X.poner(f, 4, vacio(ind.meta) ? '—' : ind.meta, xCalc(fVal, { h: 'center' }));
-      X.poner(f, 5, con ? r.brecha : '—', xCalc(fPts, { h: 'center' }));
-      X.poner(f, 6, con && !cumple ? r.real.suficiencia : '—', xCalc('0%', { h: 'center', negrita: true, tam: 11 }));
-      X.poner(f, 7, xTextoChip(sem), xChip(sem.tono));
-      X.poner(f, 8, con ? r.real.pp : '—', xCalc(fPts, { h: 'center', negrita: true }));
-      X.poner(f, 9, con ? r.real.proyectado : '—', xCalc(fVal, { h: 'center' }));
-      X.poner(f, 10, con ? r.real.brechaRestante : '—', xCalc(fPts, { h: 'center' }));
-      X.poner(f, 11, con && !cumple ? r.plan.suficiencia : '—', xCalc('0%', { h: 'center' }));
-      X.poner(f, 12, ind.dolores.length, xCalc(null, { h: 'center' }));
-      X.poner(f, 13, ind.iniciativas.length, xCalc(null, { h: 'center' }));
-      X.poner(f, 14, alertas(ind, r).length, xCalc(null, { h: 'center' }));
-      X.poner(f, 15, 'Ver hoja ›', { negrita: true, subrayado: true, color: XC.rojo, fondo: XC.calc, borde: XC.suave, h: 'center' });
-      X.enlazar(f, 15, x.hoja, 'Ver hoja ›');
-      X.alto(f++, Math.max(20, xAlto(nombreDe(ind) + (ind.ejemplo ? '  (ejemplo)' : ''), 41, true)));
+      X.poner(f, 2, seg, xCalc(null, { ajustar: true }));
+      X.poner(f, 3, ind.sentido === 'sube' ? '↑ Que suba' : (ind.sentido === 'baja' ? '↓ Que baje' : '—'), xCalc(null, { h: 'center' }));
+      X.poner(f, 4, vacio(ind.ejecutado) ? '—' : ind.ejecutado, xCalc(fVal, { h: 'center' }));
+      X.poner(f, 5, vacio(ind.meta) ? '—' : ind.meta, xCalc(fVal, { h: 'center' }));
+      X.poner(f, 6, con ? r.brecha : '—', xCalc(fPts, { h: 'center' }));
+      X.poner(f, 7, con && !cumple ? r.real.suficiencia : '—', xCalc('0%', { h: 'center', negrita: true, tam: 11 }));
+      X.poner(f, 8, xTextoChip(sem), xChip(sem.tono));
+      X.poner(f, 9, con ? r.real.pp : '—', xCalc(fPts, { h: 'center', negrita: true }));
+      X.poner(f, 10, con ? r.real.proyectado : '—', xCalc(fVal, { h: 'center' }));
+      X.poner(f, 11, con ? r.real.brechaRestante : '—', xCalc(fPts, { h: 'center' }));
+      X.poner(f, 12, con && !cumple ? r.plan.suficiencia : '—', xCalc('0%', { h: 'center' }));
+      X.poner(f, 13, ind.dolores.length, xCalc(null, { h: 'center' }));
+      X.poner(f, 14, ind.iniciativas.length, xCalc(null, { h: 'center' }));
+      X.poner(f, 15, alertas(ind, r).length, xCalc(null, { h: 'center' }));
+      X.poner(f, 16, 'Ver hoja ›', { negrita: true, subrayado: true, color: XC.rojo, fondo: XC.calc, borde: XC.suave, h: 'center' });
+      X.enlazar(f, 16, x.hoja, 'Ver hoja ›');
+      X.alto(f++, Math.max(20, xAlto(nombreDe(ind) + (ind.ejemplo ? '  (ejemplo)' : ''), 41, true), xAlto(seg, 19)));
     });
     f = xBanda(X, f + 1, 'QUÉ SIGNIFICA EL SEMÁFORO', ultima);
     etiquetasExplicadas().slice(0, 3).concat([
@@ -1633,16 +1963,17 @@
     var nd = ind.dolores.length;
     var D0 = 2;
     var cx = D0 + nd;
-    var col = { ejec: cx, estado: cx + 1, resp: cx + 2, fecha: cx + 3, evid: cx + 4, aporte: cx + 5, aportePct: cx + 6, sinElla: cx + 7, etq: cx + 8, rev: cx + 9 };
+    var col = { ejec: cx, resp: cx + 1, fecha: cx + 2, evid: cx + 3, aporte: cx + 4, aportePct: cx + 5, sinElla: cx + 6, etq: cx + 7, rev: cx + 8 };
     var ultima = col.rev;
     var fPts = xFormato(unidadPuntos(ind));
     var fVal = xFormato(ind.unidad);
     var sem = SEMAFORO[r.real.semaforo];
     var con = r.real.semaforo !== 'SIN DATOS';
     var cumple = r.real.semaforo === 'META CUMPLIDA';
+    var rs = r.segmentos;
     X.anchos = [6, 46];
     for (var k = 0; k < nd; k++) X.anchos[D0 + k] = 17;
-    [12, 13, 18, 15, 44, 12, 12, 13, 15, 20].forEach(function (w, i) { X.anchos[cx + i] = w; });
+    [12, 18, 15, 44, 12, 12, 13, 15, 20].forEach(function (w, i) { X.anchos[cx + i] = w; });
     X.color = ind.ejemplo ? 'A6A6A6' : XC.rojo;
     X.congelar = { columnas: 2 };
     X.horizontal = true;
@@ -1681,6 +2012,40 @@
       r.brecha > 0 ? (r.real.brechaRestante > 0 ? 'de ' + puntos(r.brecha, ind) + ' de brecha' : 'Cierras toda la brecha') : (cumple ? 'La meta ya se cumple' : ''));
     dato('Si todo se cumple', con && !cumple ? r.plan.suficiencia : '—', xCalc('0%', { h: 'center' }),
       con && !cumple ? 'Con todas las iniciativas al 100 % recuperarías ' + puntos(r.plan.pp, ind) + '.' : '');
+
+    // El cálculo paso a paso, con los números de este indicador
+    f = xBanda(X, f + 1, 'CÓMO SE CALCULA LA SUFICIENCIA   ·   PASO A PASO', ultima);
+    f = xCabecera(X, f, [[0, '#'], [1, 'Qué se calcula', true], [2, 'Resultado'], [3, 'De dónde sale', true]]);
+    var nPaso = 0;
+    function pasoCalculo(etq, valor, estilo, como) {
+      X.poner(f, 0, ++nPaso, { negrita: true, h: 'center', color: XC.rojo });
+      X.poner(f, 1, etq, XE.etiqueta);
+      X.poner(f, 2, valor, estilo);
+      X.poner(f, 3, como, { color: '404040' });
+      X.alto(f++, 18);
+    }
+    var hoyTxt = valorConUnidad(ind.ejecutado, ind);
+    pasoCalculo('Problema total (el pastel)', vacio(ind.ejecutado) ? '—' : r.problema, xCalc(fPts, { h: 'center' }),
+      vacio(ind.ejecutado) ? 'Falta el valor de hoy (paso 1).' : 'Distancia entre hoy (' + hoyTxt + ') y el valor ideal (' + valorConUnidad(r.idealUsado, ind) + ').');
+    pasoCalculo('Brecha a la meta', con ? r.brecha : '—', xCalc(fPts, { h: 'center' }),
+      con ? 'Distancia entre hoy (' + hoyTxt + ') y la meta 2027 (' + valorConUnidad(ind.meta, ind) + '): lo que debes recuperar.' : 'Faltan datos del paso 1.');
+    pasoCalculo('Impacto de cada dolor', nd ? 'Ver paso 2' : '—', xCalc(null, { h: 'center' }),
+      'Casos de cada dolor ÷ casos analizados, repartido para que entre todos sumen 100 % (hoy suman ' + pct(r.sumaAtribucion, 1) + ').');
+    pasoCalculo('Lo que resuelven las iniciativas', ind.iniciativas.length ? 'Ver paso 3' : '—', xCalc(null, { h: 'center' }),
+      'En cada dolor, cada iniciativa resuelve efectividad × ejecución de lo que dejó la anterior.');
+    pasoCalculo('Puntos que recuperas (mueve el indicador)', con ? r.real.pp : '—', xCalc(fPts, { h: 'center', negrita: true }),
+      'Problema × impacto del dolor × lo resuelto, sumado en todos los dolores.');
+    pasoCalculo('Suficiencia = puntos ÷ brecha', con && !cumple ? r.real.suficiencia : '—', xCalc('0%', { h: 'center', negrita: true }),
+      con && !cumple ? puntos(r.real.pp, ind) + ' ÷ ' + puntos(r.brecha, ind) + ' = ' + pct(r.real.suficiencia) + '.' : (cumple ? 'La meta ya se cumple: no hay brecha.' : 'Faltan datos del paso 1.'));
+    pasoCalculo('Semáforo', xTextoChip(sem), xChip(sem.tono),
+      'Desde ' + pct(estado.params.semaforo[2].desde) + ' alcanza; desde ' + pct(estado.params.semaforo[1].desde) + ' está cerca; menos, no alcanza.');
+    if (rs.conPesos) {
+      pasoCalculo('Aporte por segmento', 'Ver paso 1', xCalc(null, { h: 'center' }),
+        'Peso de cada segmento × ' + puntos(rs.total, ind) + ' (lo que mueve el indicador).');
+    }
+    X.poner(f, 1, 'En palabras simples', XE.etiqueta);
+    X.poner(f, 2, textoPlano(frase(ind, r)), XE.frase);
+    X.alto(f++, 22);
 
     // Lo que debes vigilar
     f = xBanda(X, f + 1, 'LO QUE DEBES VIGILAR', ultima);
@@ -1721,10 +2086,7 @@
     // Paso 1
     f = xBanda(X, f + 1, 'PASO 1 · ¿CUÁNTO ME FALTA?', ultima);
     X.poner(f, 1, 'Nombre del indicador', XE.etiqueta);
-    X.poner(f, 2, ind.nombre, xEntrada(null, { negrita: true }));
-    X.pintar(f, 3, f, 5, xEntrada(null));
-    X.unir(f, 2, f, 5);
-    f++;
+    X.poner(f++, 2, ind.nombre, xEntrada(null, { negrita: true }));
     var fSentido = dato('¿Qué es mejor?', ind.sentido === 'sube' ? 'Que suba' : (ind.sentido === 'baja' ? 'Que baje' : ''), xEntrada(null, { h: 'center' }), 'Elige de la lista: Que suba o Que baje.');
     X.validar(fSentido, 2, fSentido, 2, { tipo: 'lista', valores: ['Que suba', 'Que baje'] });
     dato('Unidad', ind.unidad, xEntrada(null, { h: 'center' }), 'Ej.: %, minutos, puntos NPS.');
@@ -1733,6 +2095,31 @@
     dato('Valor ideal', ind.ideal, xEntrada(null, { h: 'center' }), 'El mejor valor posible. Vacío = automático (' + (ind.sentido === 'sube' ? '100' : '0') + ').');
     dato('Problema total (el pastel)', vacio(ind.ejecutado) ? '—' : r.problema, xCalc(fPts, { h: 'center' }), 'Distancia entre hoy y el valor ideal: todo el problema que explican los dolores.');
     dato('Brecha a la meta', con ? r.brecha : '—', xCalc(fPts, { h: 'center' }), 'Distancia entre hoy y la meta 2027: lo que tus iniciativas deben recuperar.');
+    var fTipo = dato('Tipo de segmento', ind.tipoSegmento, xEntrada(null, { h: 'center' }), 'Elige de la lista: UMM, UMC o Transversal (puede tener segmentos de las dos).');
+    X.validar(fTipo, 2, fTipo, 2, { tipo: 'lista', valores: Motor.TIPOS_SEGMENTO });
+    var segTxt = textoSegmentos(ind);
+    var fSeg = dato('Segmentos', segTxt, xEntrada(null, { ajustar: true }), 'Separados por coma. UMM: Hogar, Pospago, Prepago · UMC: Pyme Fijo, Pyme Móvil.');
+    X.alto(fSeg, Math.max(18, xAlto(segTxt, (X.anchos[2] || 9) - 1)));
+    // Peso y aporte por segmento: solo si el usuario definió algún peso
+    if (rs.conPesos) {
+      f = xCabecera(X, f, [[1, 'Segmento', true], [2, 'Peso del segmento (%)'], [3, 'Aporte (pp)']]);
+      var fP = f;
+      rs.filas.forEach(function (s) {
+        X.poner(f, 1, s.nombre, XE.etiqueta);
+        X.poner(f, 2, s.peso === null ? 'No definido' : s.peso, xEntrada('0.0%', { h: 'center' }));
+        X.poner(f++, 3, s.pp === null ? '—' : s.pp, xCalc(fPts, { h: 'center' }));
+      });
+      X.validar(fP, 2, f - 1, 2, REGLA_PCT);
+      var pasa = rs.chequeo === 'PASA DE 100';
+      X.poner(f, 1, 'Sin asignar', XE.etiqueta);
+      X.poner(f, 2, pasa ? '—' : rs.sinAsignar.peso, xCalc('0.0%', { h: 'center' }));
+      X.poner(f++, 3, pasa ? '—' : rs.sinAsignar.pp, xCalc(fPts, { h: 'center' }));
+      X.poner(f, 1, 'Total', XE.etiqueta);
+      X.poner(f, 2, pasa ? rs.sumaPesos : 1, xCalc('0.0%', { h: 'center', negrita: true }));
+      X.poner(f++, 3, rs.total, xCalc(fPts, { h: 'center', negrita: true }));
+      X.poner(f++, 1, pasa ? 'Los pesos suman más de 100 %: corrígelos (deben sumar máximo 100 %).'
+        : 'Aporte = peso × lo que mueve el indicador. Ej.: si mueve 3 pp y Hogar pesa 60 %, Hogar aporta 1,8 pp.', XE.nota);
+    }
 
     // Paso 2: los dolores van en columnas (las mismas columnas del paso 3)
     f = xBanda(X, f + 1, 'PASO 2 · ¿QUÉ CAUSA EL PROBLEMA?   (DOLORES)', ultima);
@@ -1776,7 +2163,7 @@
     X.poner(f++, 1, 'En cada columna D escribe qué % de ese dolor resuelve la iniciativa si se hace completa (vacío = 0 %). La ejecución es cuánto estará listo de verdad en 2027.', XE.nota);
     f = xCabecera(X, f, [[0, 'N°'], [1, 'Iniciativa', true]]
       .concat(ind.dolores.map(function (d, j) { return [D0 + j, 'D' + (j + 1) + ' · ' + (d.nombre || 'Dolor ' + (j + 1))]; }))
-      .concat([[col.ejec, 'Ejecución a 2027'], [col.estado, 'Estado'], [col.resp, 'Responsable'], [col.fecha, 'Fecha comprometida'],
+      .concat([[col.ejec, 'Ejecución a 2027'], [col.resp, 'Responsable'], [col.fecha, 'Fecha comprometida'],
         [col.evid, 'Evidencia que respalda los %', true], [col.aporte, 'Aporte (pp)'], [col.aportePct, 'Aporte (% de la brecha)'],
         [col.sinElla, 'Si falla, la suficiencia baja a'], [col.etq, 'Etiqueta'], [col.rev, 'Revisión']]));
     var f0 = f;
@@ -1789,7 +2176,6 @@
       X.poner(f, 1, x.nombre, xEntrada(null, { ajustar: true }));
       ind.dolores.forEach(function (d, j) { X.poner(f, D0 + j, vacio(x.efectividad[d.id]) ? null : x.efectividad[d.id], xEntrada('0%', { h: 'center' })); });
       X.poner(f, col.ejec, x.ejecucion, xEntrada('0%', { h: 'center', negrita: true }));
-      X.poner(f, col.estado, x.estado, xEntrada(null, { h: 'center' }));
       X.poner(f, col.resp, x.responsable, xEntrada(null, { ajustar: true }));
       X.poner(f, col.fecha, Excel.serieDeFecha(x.fecha), xEntrada('fecha', { h: 'center' }));
       X.poner(f, col.evid, x.evidencia, xEntrada(null, { ajustar: true }));
@@ -1803,7 +2189,6 @@
     if (ind.iniciativas.length) {
       if (nd) X.validar(f0, D0, f - 1, D0 + nd - 1, REGLA_PCT);
       X.validar(f0, col.ejec, f - 1, col.ejec, REGLA_PCT);
-      X.validar(f0, col.estado, f - 1, col.estado, { tipo: 'lista', valores: Motor.ESTADOS });
     } else {
       X.poner(f + 1, 1, 'Aún no hay iniciativas. Agrégalas en la calculadora (paso 3).', XE.nota);
     }
@@ -1933,7 +2318,10 @@
           estado: txt('J' + fila) || 'En plan', responsable: txt('K' + fila), fecha: fechaCelda(celda('L' + fila)), evidencia: txt('M' + fila)
         });
       }
-      inds.push(Motor.normalizarIndicador(ind));
+      // La plantilla no tiene segmento: al actualizar un indicador se conserva el que tenía
+      var listo = Motor.normalizarIndicador(ind);
+      listo.sinSegmento = true;
+      inds.push(listo);
     });
     var params = null;
     var wp = libro.hojas.Parametros;
@@ -2037,6 +2425,13 @@
       dolores: [],
       iniciativas: []
     };
+    // Segmento: «Tipo de segmento», «Segmentos» (separados por coma) y, si hay, el peso en la fila de cada segmento
+    var tipoSeg = normal(dato(paso[1], fin1, 'tipo de segmento'));
+    ind.tipoSegmento = Motor.TIPOS_SEGMENTO.filter(function (t) { return normal(t) === tipoSeg; })[0] || '';
+    ind.segmentos = txt(fila(paso[1], fin1, 'segmentos'), 2).split(/[,;]/).map(function (s) {
+      var nombre = Motor.segmentosDe('Transversal').filter(function (x) { return normal(x) === normal(s); })[0];
+      return nombre ? { nombre: nombre, peso: fraccionCelda(dato(paso[1], fin1, normal(nombre))) } : null;
+    }).filter(Boolean);
     // Paso 3: el encabezado dice en qué columna va cada dato
     var fCab = fila(paso[3], fin, 'iniciativa');
     var colDe = {};
@@ -2087,7 +2482,11 @@
         });
       }
     }
-    return Motor.normalizarIndicador(ind);
+    var listo = Motor.normalizarIndicador(ind);
+    // El Excel exportado ya no trae la columna Estado: al importar se conserva el que tenía cada iniciativa
+    if (colDe.estado === undefined) listo.sinEstado = true;
+    if (fila(paso[1], fin1, 'tipo de segmento') < 0) listo.sinSegmento = true;
+    return listo;
   }
 
   function leerHojaAjustes(ws) {
@@ -2112,11 +2511,24 @@
     var antes = foto();
     var nuevos = 0;
     var actualizados = 0;
+    // Cada indicador del tablero se actualiza una sola vez (dos hojas con el mismo nombre, o sin nombre, no se pisan)
+    var usados = {};
     inds.forEach(function (ind) {
       var clave = ind.nombre.trim().toLowerCase();
-      var existente = estado.indicadores.filter(function (x) { return x.nombre.trim().toLowerCase() === clave; })[0];
+      var existente = estado.indicadores.filter(function (x) { return !usados[x.id] && x.nombre.trim().toLowerCase() === clave; })[0];
+      if (existente && ind.sinEstado) {
+        ind.iniciativas.forEach(function (x) {
+          var antes = existente.iniciativas.filter(function (y) { return y.nombre === x.nombre; })[0];
+          if (antes) x.estado = antes.estado;
+        });
+      }
+      // Un Excel exportado antes de existir el segmento no trae esas filas: se conserva el que había
+      if (existente && ind.sinSegmento) { ind.tipoSegmento = existente.tipoSegmento; ind.segmentos = existente.segmentos; }
+      delete ind.sinEstado;
+      delete ind.sinSegmento;
       if (existente) { ind.id = existente.id; estado.indicadores[estado.indicadores.indexOf(existente)] = ind; actualizados++; }
       else { ind.id = Motor.nuevoId('ind-'); estado.indicadores.push(ind); nuevos++; }
+      usados[ind.id] = true;
     });
     if (params) estado.params = params;
     estado.sel = inds[0].id;
@@ -2132,16 +2544,31 @@
     var nombre = archivo.name;
     if (/\.json$/i.test(nombre)) {
       archivo.text().then(function (texto) {
-        var datos = Motor.normalizarDatos(JSON.parse(texto));
-        if (!datos || !datos.indicadores.length) throw new Error('vacío');
+        var crudo = JSON.parse(texto);
+        var e = Motor.normalizarEspacio(crudo);
+        if (!e) throw new Error('vacío');
         var antes = foto();
-        estado.indicadores = datos.indicadores;
-        estado.params = datos.params;
-        estado.sel = datos.sel && datos.indicadores.some(function (x) { return x.id === datos.sel; }) ? datos.sel : datos.indicadores[0].id;
+        var copiaVieja = !(crudo.version >= 3);
+        if (copiaVieja && !e.actual.indicadores.length) throw new Error('vacío');
+        // Un respaldo suma sus cálculos a Mis cálculos (el mismo cálculo se reemplaza) y abre su tablero
+        e.calculos.forEach(function (c) {
+          var viejo = calculoDe(c.id);
+          if (viejo) calculos[calculos.indexOf(viejo)] = c; else calculos.push(c);
+        });
+        if (e.actual && e.actual.indicadores.length) {
+          estado.indicadores = e.actual.indicadores;
+          estado.params = e.actual.params;
+          estado.sel = e.actual.indicadores.some(function (x) { return x.id === e.actual.sel; }) ? e.actual.sel : e.actual.indicadores[0].id;
+          estado.calculoId = e.activo;
+          estado.base = e.base;
+        }
+        abiertos = {};
         pintarTodo(true);
-        conDeshacer('Abriste la copia ' + nombre + ' (' + datos.indicadores.length + ' indicadores).', antes);
+        guardar();
+        conDeshacer(copiaVieja ? 'Abriste la copia ' + nombre + ' (' + e.actual.indicadores.length + ' indicadores).'
+          : 'Cargaste el respaldo ' + nombre + ': ' + e.calculos.length + (e.calculos.length === 1 ? ' cálculo guardado' : ' cálculos guardados') + ' y su tablero.', antes, 12000);
       }).catch(function () {
-        avisar('No se pudo abrir ' + nombre + ': no es una copia de esta calculadora. Usa un archivo creado con «Guardar una copia».');
+        avisar('No se pudo abrir ' + nombre + ': no es un respaldo de esta calculadora. Usa un archivo creado con «Descargar respaldo».');
       });
       return;
     }
@@ -2227,11 +2654,21 @@
     var acc = b.dataset.accion;
     if (b.closest('.menu')) cerrarMenus();
     switch (acc) {
-      case 'menu': alternarMenu(b); break;
+      case 'menu':
+        if (b.getAttribute('aria-controls') === 'menu-calculos') pintarCalculos();
+        alternarMenu(b);
+        break;
       case 'seleccionar':
         if (b.dataset.id !== estado.sel) { estado.sel = b.dataset.id; abiertos = {}; pintarTodo(true); }
         break;
-      case 'nuevo-indicador': nuevoIndicador(); break;
+      case 'nuevo-calculo': nuevoCalculo(); break;
+      case 'agregar-indicador': agregarIndicador(); break;
+      case 'guardar-calculo': guardarDesdeMenu(); break;
+      case 'abrir-calculo': abrirCalculo(b.dataset.id); break;
+      case 'eliminar-calculo': eliminarCalculo(b.dataset.id); break;
+      case 'descargar-respaldo': descargarRespaldo(); break;
+      case 'cargar-respaldo': D.archivo.accept = '.json'; D.archivo.value = ''; D.archivo.click(); break;
+      case 'tipo-segmento': cambiarTipoSegmento(b.dataset.valor); break;
       case 'duplicar': duplicar(); break;
       case 'eliminar': eliminar(b.dataset.id); break;
       case 'sentido': actual().sentido = b.dataset.valor; recalcular(false); break;
@@ -2248,8 +2685,7 @@
       case 'como-funciona': abrirComo(); break;
       case 'cerrar-dialogo': cerrarDialogo(b.closest('dialog')); break;
       case 'cerrar-intro': cerrarIntro(); break;
-      case 'importar': D.archivo.value = ''; D.archivo.click(); break;
-      case 'exportar': exportar(); break;
+      case 'importar': D.archivo.accept = '.xlsx,.xlsm,.xls,.json'; D.archivo.value = ''; D.archivo.click(); break;
       case 'exportar-excel': abrirExportar(); break;
       case 'exp-todos': marcarExportar(true); break;
       case 'exp-ninguno': marcarExportar(false); break;
@@ -2272,6 +2708,32 @@
     t.value = editablePct(leerParam(def, estado.params));
   });
   D.archivo.addEventListener('change', function () { importar(D.archivo.files && D.archivo.files[0]); });
+  D.calculos.addEventListener('change', function (e) { if (e.target.classList.contains('calc-nombre')) renombrarCalculo(e.target); });
+  // La respuesta se da al pulsar el botón (no al cerrarse el diálogo, que llega después): así no se cruza con otra pregunta
+  $('form', D.dlgPregunta).addEventListener('submit', function (e) {
+    e.preventDefault();
+    var listo = alResponder;
+    alResponder = null;
+    cerrarDialogo(D.dlgPregunta);
+    if (listo) listo((e.submitter && e.submitter.value) || 'cancelar', D.pregNombre.value);
+  });
+  // Esc o cerrar sin elegir = Cancelar
+  D.dlgPregunta.addEventListener('close', function () {
+    if (D.dlgPregunta.open) return;
+    var listo = alResponder;
+    alResponder = null;
+    if (listo) listo('cancelar', '');
+  });
+  // Lo último que se escribió se guarda aunque se cierre la página antes de la pausa del guardado
+  window.addEventListener('pagehide', function () { if (tGuardar) guardar(); });
+  // Con la página abierta en otra pestaña: se toma su lista de Mis cálculos para no borrarla al guardar aquí
+  window.addEventListener('storage', function (e) {
+    if (e.key !== CLAVE_DATOS || !e.newValue) return;
+    try {
+      var otro = Motor.normalizarEspacio(JSON.parse(e.newValue));
+      if (otro) calculos = otro.calculos;
+    } catch (err) { /* lo de la otra pestaña no se pudo leer: se sigue con lo de esta */ }
+  });
   D.expLista.addEventListener('change', actualizarBotonExportar);
   D.formExportar.addEventListener('submit', function (e) {
     e.preventDefault();
@@ -2329,4 +2791,5 @@
   D.intro.hidden = !primeraVez;
   pintarTodo(true);
   revisarResumen();
+  if (sinAlmacen) avisar('Este navegador no deja guardar datos: lo que hagas se pierde al cerrar. Usa «Descargar respaldo» en Mis cálculos para no perderlo.', null, 10000);
 })();

@@ -110,6 +110,7 @@ test('Nombres de hoja válidos para Excel', () => {
   assert.equal(X.nombreHoja('Un nombre de indicador larguísimo que no cabe', usados), 'Un nombre de indicador…', 'recorta en una palabra completa');
   assert.equal(X.nombreHoja('UN NOMBRE DE INDICADOR LARGUÍSIMO que no cabe', usados), 'UN NOMBRE DE INDICADOR… (2)', 'no repite nombres aunque cambien mayúsculas');
   assert.equal(X.nombreHoja('02 Instalaciones en fecha (FTTH)', []), '02 Instalaciones en fecha…', 'no deja un paréntesis abierto');
+  assert.equal(X.nombreHoja('NPS 2.0 a/b', []), 'NPS 2 0 a b', 'sin puntos ni barras');
   assert.ok(usados.every((u) => u.length <= 31));
 });
 
