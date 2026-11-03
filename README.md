@@ -5,6 +5,28 @@ Calcula si las iniciativas de cada indicador alcanzan para cumplir la meta 2027 
 - **`suficiencia_cx.html`**: el tablero web. Ábrelo con doble clic o publícalo con GitHub Pages. No necesita instalar nada.
 - **`Plantilla_Suficiencia.xlsx`**: la plantilla de Excel. Usa las mismas fórmulas que el tablero, y el tablero puede importarla.
 
+## Así se ve
+
+Capturas del tablero con el ejemplo lleno («Churn mensual pospago», datos de muestra). Lo oscuro es el resultado y solo se lee; lo blanco es el taller, donde se escribe.
+
+**El resultado:** el pastel del problema, el anillo de suficiencia, cuántos puntos mueve el indicador, lo que debes vigilar, quién aporta más y el aporte por segmento.
+
+![Resultado: pastel, anillo de suficiencia, alertas, ranking de iniciativas y aporte por segmento](docs/img/tablero-resultado.png)
+
+**El taller, pasos 1 y 2:** hoy, meta y segmento (con peso opcional) y los dolores con sus casos.
+
+![Taller: paso 1 con el segmento y paso 2 con los dolores](docs/img/tablero-taller.png)
+
+**El taller, paso 3:** qué % de cada dolor resuelve cada iniciativa y cuánto estará ejecutado en 2027.
+
+![Taller: paso 3 con la matriz de iniciativas](docs/img/tablero-iniciativas.png)
+
+**En el celular** también funciona (aquí a 390 px de ancho):
+
+<img src="docs/img/tablero-movil.png" alt="El tablero en un celular" width="260">
+
+Además: **Mis cálculos** (guardar, abrir, renombrar y duplicar), **Exportar Excel** (una hoja por indicador con el cálculo paso a paso) y **Descargar respaldo**, como se explica más abajo.
+
 ## Descargar el proyecto en otro computador
 
 - **Sin instalar nada:** en GitHub, botón verde **Code › Download ZIP**. Descomprime el archivo y abre `suficiencia_cx.html`.
@@ -69,6 +91,7 @@ tests/excel.test.js           Prueba: el .xlsx se escribe bien y se vuelve a lee
 tests/segmentos.test.js       Prueba: peso por segmento, guardado en el navegador y respaldo .json
 tests/navegador/              Pruebas del tablero en el navegador (también persistencia y celular a 390 px)
 herramientas/                 Scripts para generar y verificar el Excel y probar el tablero
+docs/img/                     Capturas del tablero que se ven en este README
 docs/prompts.md               Pedidos y prompt final del proyecto
 docs/diseno.md                Decisiones de diseño y arquitectura
 ```
