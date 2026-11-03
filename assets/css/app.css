@@ -373,6 +373,7 @@ ol, ul { padding: 0; list-style: none; }
 .ley-barra b { position: absolute; top: -3px; bottom: -3px; left: calc(var(--p) * 100%); width: 2px; border-radius: 1px; background: rgba(255, 255, 255, .7); }
 .ley-sub { grid-column: 2 / -1; display: flex; flex-wrap: wrap; gap: 0 10px; font-size: 12px; line-height: 1.3; color: var(--tiza-3); }
 .ley-sub span { white-space: nowrap; }
+.ley-sub .ley-seg { color: var(--tiza); font-weight: 600; }
 .ley-mas .btn-texto { margin: 4px 0 0; }
 .vacio-oscuro { padding: 12px 0; font-size: 13.5px; color: var(--tiza-3); }
 /* al entrar, las barras de la leyenda y del ranking crecen una tras otra */
@@ -429,6 +430,7 @@ ol, ul { padding: 0; list-style: none; }
 .tabla-seg thead th { border-top: 0; font-size: 12.5px; font-weight: 600; color: var(--tiza-3); }
 .tabla-seg tbody th { font-weight: 600; color: #fff; }
 .tabla-seg .seg-sin th, .tabla-seg .seg-sin td { color: var(--tiza-3); }
+.tabla-seg td small { font-size: 11px; color: var(--tiza-3); }
 .tabla-seg .seg-total th, .tabla-seg .seg-total td { font-weight: 700; color: #fff; border-top-color: rgba(255, 255, 255, .3); }
 
 /* chips de estado: siempre icono + texto */
@@ -621,6 +623,23 @@ select.entrada { padding-right: 30px; appearance: none; -webkit-appearance: none
 .bala-ley .k-plan { border: 1.5px dashed rgba(21, 21, 21, .6); }
 
 /* paso 2 · dolores */
+/* con varios segmentos, un bloque por segmento con su título, su parte del problema y sus dolores */
+.seg-bloque--varios { margin-top: 18px; padding: 18px; border: 1px solid var(--linea); border-radius: 18px; }
+.seg-bloque--varios:first-child { margin-top: 0; }
+.seg-bloque--sin { border-color: rgba(218, 41, 28, .55); }
+.seg-bloque-cab { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 16px; margin-bottom: 14px; }
+.seg-bloque-titulo { font-size: 16px; font-weight: 700; }
+.seg-bloque-parte { font-size: 13px; color: var(--tinta-2); }
+.seg-bloque-parte b { color: var(--tinta); font-weight: 650; }
+.seg-bloque > .nota:first-child, .seg-bloque-cab + .nota { margin: 0 0 14px; }
+.seg-bloque-acciones { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.seg-bloque-acciones .btn-agregar { flex: 1 1 320px; width: auto; }
+.copiar-dolores { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 13px; font-weight: 600; color: var(--tinta-2); }
+.copiar-dolores select.entrada { width: auto; height: 38px; padding: 0 30px 0 12px; font-size: 14px; }
+.d-seg { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12px; font-weight: 600; color: var(--tinta-3); }
+.d-seg select.entrada { width: auto; max-width: 100%; height: 32px; padding: 0 30px 0 10px; font-size: 13px; }
+@container (width < 520px) { .seg-bloque--varios { padding: 14px 10px; } }
+.d-seg--falta select.entrada { outline: 2px solid rgba(218, 41, 28, .6); }
 .casos-fila { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; margin-bottom: 18px; }
 .casos-fila .campo { width: min(260px, 100%); }
 .casos-fila .pista { flex: 1 1 280px; padding-bottom: 12px; }
@@ -735,6 +754,18 @@ select.entrada { padding-right: 30px; appearance: none; -webkit-appearance: none
 [aria-expanded="true"] > .ic.girar { transform: rotate(180deg); }
 .ini.atenuada { opacity: .55; }
 .sin-dolores { padding: 10px 12px; border-radius: 10px; background: var(--hoja-2); color: var(--tinta-3); font-size: 13px; }
+/* «Aplica a»: un botón por segmento; encendido = la iniciativa resuelve dolores de ese segmento */
+.aplica { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 6px; }
+.aplica-etq { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; color: var(--tinta-3); }
+.aplica-seg {
+  height: 26px; padding: 0 9px; border-radius: 999px; border: 1px solid #D3D3D3; background: transparent;
+  font-size: 12px; font-weight: 600; color: var(--tinta-3); text-decoration: line-through; transition: background var(--dur), color var(--dur), border-color var(--dur);
+}
+.aplica-seg[aria-pressed="true"] { border-color: var(--tinta); background: var(--tinta); color: #fff; text-decoration: none; }
+.celda-caja--no { display: grid; place-items: center; background: repeating-linear-gradient(135deg, #F4F4F4 0 6px, #FAFAFA 6px 12px); }
+.celda-caja--no span { font-size: 11px; font-weight: 600; color: var(--tinta-3); }
+.cab-num { display: flex; align-items: center; gap: 6px; }
+.cab-seg { font: 600 10.5px/1.2 var(--f-mono); color: var(--rojo); }
 
 @container (width >= 1100px) {
   .matriz {
@@ -877,7 +908,7 @@ select.entrada { padding-right: 30px; appearance: none; -webkit-appearance: none
 }
 @media print {
   body { background: #fff; }
-  .barra, .riel, .intro, .ayuda, .btn-repartir, .btn-agregar, .i-mas, .d-mas, .titulo-fila .btn-redondo, .vig .btn-chico, .pie .ajustes, .aviso, .tip, .saltar { display: none !important; }
+  .barra, .riel, .intro, .ayuda, .btn-repartir, .btn-agregar, .copiar-dolores, .i-mas, .d-mas, .titulo-fila .btn-redondo, .vig .btn-chico, .pie .ajustes, .aviso, .tip, .saltar { display: none !important; }
   .escenario { background: #fff; color: #000; }
   .escenario::before, .pastel::before { display: none; }
   .escenario .titulo, .escenario .mini-titulo, .escenario .kpi dd, .escenario .frase strong, .escenario .pastel-valor,

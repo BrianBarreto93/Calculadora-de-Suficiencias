@@ -9,11 +9,11 @@ Calcula si las iniciativas de cada indicador alcanzan para cumplir la meta 2027 
 
 Capturas del tablero con el ejemplo lleno («Churn mensual pospago», datos de muestra). Lo oscuro es el resultado y solo se lee; lo blanco es el taller, donde se escribe.
 
-**El resultado:** el pastel del problema, el anillo de suficiencia, cuántos puntos mueve el indicador, lo que debes vigilar, quién aporta más y el aporte por segmento.
+**El resultado:** el pastel del problema, el anillo de suficiencia, cuántos puntos mueve el indicador, lo que debes vigilar, quién aporta más y el resultado por segmento.
 
 ![Resultado: pastel, anillo de suficiencia, alertas, ranking de iniciativas y aporte por segmento](docs/img/tablero-resultado.png)
 
-**El taller, pasos 1 y 2:** hoy, meta y segmento (con peso opcional) y los dolores con sus casos.
+**El taller, pasos 1 y 2:** hoy, meta y segmento y los dolores con sus casos (con varios segmentos, un bloque por segmento).
 
 ![Taller: paso 1 con el segmento y paso 2 con los dolores](docs/img/tablero-taller.png)
 
@@ -49,9 +49,9 @@ Qué necesita cada parte:
 1. Mira el **ejemplo lleno** (Churn mensual pospago) para ver cómo se llena un cálculo.
 2. Pulsa **+ Agregar indicador** (en **Tus indicadores**) para sumar otro indicador al mismo tablero. Para borrar uno, usa la papelera de su tarjeta.
 3. En el **taller** (la parte blanca), llena los 3 pasos:
-   1. Hoy, meta 2027, si es mejor que el indicador suba o baje, y el **segmento** (obligatorio): UMM (Hogar, Pospago, Prepago), UMC (Pyme Fijo, Pyme Móvil) o Transversal (de las dos). En un indicador Transversal puedes escribir, si quieres, el **peso de cada segmento (%)**.
-   2. Los dolores y sus casos (hasta 15).
-   3. Las iniciativas (hasta 15): qué % de cada dolor resuelven y cuánto estará ejecutado en 2027.
+   1. Hoy, meta 2027, si es mejor que el indicador suba o baje, y el **segmento** (obligatorio): UMM (Hogar, Pospago, Prepago), UMC (Pyme Fijo, Pyme Móvil) o Transversal (de las dos). Con 2 o más segmentos puedes escribir, si quieres, la **parte del problema (%)** de cada uno; si no, sale de sus casos analizados.
+   2. Los dolores y sus casos (hasta 15 por segmento). Con varios segmentos hay un bloque por segmento, cada uno con sus casos analizados y sus dolores; **Copiar los dolores de…** trae los nombres de otro segmento para no escribirlos dos veces.
+   3. Las iniciativas (hasta 15 por segmento marcado): qué % de cada dolor resuelven, cuánto estará ejecutado en 2027 y, con varios segmentos, **a qué segmentos aplica** cada una (en los demás la celda dice «No aplica»).
 4. Lee el resultado arriba (la parte oscura): el pastel, el anillo de suficiencia, cuántos puntos **mueve el indicador**, lo que debes vigilar y quién aporta más. Cada número tiene un **?** que explica qué significa, con un ejemplo.
 
 **Nuevo cálculo** (botón rojo) abre un tablero nuevo. Antes pregunta si guardas el actual (Guardar / No guardar / Cancelar). Lo guardado queda en **Mis cálculos**, donde puedes abrir, renombrar, duplicar o eliminar cada cálculo, y ver su semáforo (cuántos indicadores alcanzan, están cerca o no alcanzan) sin abrirlo.
@@ -73,7 +73,12 @@ Para compartir:
 - En cada dolor, cada iniciativa deja `1 − efectividad × ejecución`. Lo que queda del dolor es el producto de esos valores: la segunda iniciativa solo resuelve lo que dejó la primera.
 - **Puntos recuperados** = problema × impacto del dolor × lo resuelto, sumado en todos los dolores. Son los puntos que **mueve el indicador**.
 - **Suficiencia** = puntos recuperados ÷ brecha.
-- **Aporte de un segmento** (opcional, solo Transversal) = peso del segmento × puntos que mueve el indicador. Ej.: si mueve 3 pp y Hogar pesa 60 %, Hogar aporta 1,8 pp. Lo que no se reparte queda «sin asignar». Los pesos no cambian la suficiencia. El botón **Repartir en partes iguales** pone el mismo peso a cada segmento marcado, solo si lo pulsas.
+- **Con varios segmentos** (desde el 3 de nov de 2026):
+  - **Parte del problema de un segmento** = sus casos analizados ÷ casos de todos los segmentos, o el % que escribas en el paso 1 (los que dejes vacíos se reparten lo que falta según sus casos). Ej.: 7.000 bajas en Hogar y 3.000 en Pospago → 70 % y 30 %.
+  - **% dolor** = casos del dolor ÷ casos analizados de **su** segmento. **Impacto del dolor** = parte del segmento × su % dolor ÷ la suma de los % dolor del segmento.
+  - Una iniciativa solo resuelve dolores de los segmentos a los que aplica.
+  - **Lo que mueve un segmento** = lo que recuperan sus dolores. La suma de los segmentos es lo que mueve el indicador, y su «de la brecha» suma la suficiencia total. Un segmento sin dolores deja su parte del problema sin resolver (la página lo avisa).
+  - Con un solo segmento todo es igual que antes. Los cálculos guardados antes de este cambio dan el mismo resultado: si tenían varios segmentos, sus dolores quedan «sin segmento» hasta que elijas el de cada uno, y los pesos viejos (que solo repartían los puntos al final) no se usan.
 - El **estado** de una iniciativa (En plan / En riesgo / Retrasada) ya no cuenta: los retrasos se expresan con el % de ejecución. Por eso, donde la plantilla de Excel dice «En riesgo», el tablero dice «Aporta».
 
 ## Estructura
@@ -88,7 +93,7 @@ assets/js/app.js              Interfaz del tablero, animaciones y contenido del 
 assets/css/app.css            Estilos
 tests/paridad_excel.test.js   Prueba: motor web = Excel
 tests/excel.test.js           Prueba: el .xlsx se escribe bien y se vuelve a leer igual
-tests/segmentos.test.js       Prueba: peso por segmento, guardado en el navegador y respaldo .json
+tests/segmentos.test.js       Prueba: dolores e iniciativas por segmento, parte del problema, guardado y respaldo .json
 tests/navegador/              Pruebas del tablero en el navegador (también persistencia y celular a 390 px)
 herramientas/                 Scripts para generar y verificar el Excel y probar el tablero
 docs/img/                     Capturas del tablero que se ven en este README

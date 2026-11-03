@@ -152,7 +152,9 @@
 
   function marcar(nombre) { $$('#paso-1 input[data-campo="segmento"]').filter(function (x) { return x.value === nombre; })[0].click(); }
   function peso(nombre) { return $$('#paso-1 input[data-campo="peso"]').filter(function (x) { return x.dataset.segmento === nombre; })[0]; }
-  function filasSeg() { return $$('#tabla-seg tbody tr').map(function (tr) { return texto(tr).replace(/ /g, ''); }); }
+  function filasSeg() { return $$('#tabla-seg tbody tr').map(function (tr) { return texto(tr).replace(/[  ]/g, ''); }); }
+  function bloques() { return $$('#paso-2 [data-grupo-bloque]').map(function (b) { return b.dataset.grupoBloque; }); }
+  function bloque(nombre) { return $$('#paso-2 [data-grupo-bloque]').filter(function (b) { return b.dataset.grupoBloque === nombre; })[0]; }
   function guardado() { return JSON.parse(localStorage.getItem('suficiencia.espacio.v3') || 'null'); }
   function dosDec(v) { return v.toFixed(2).replace('.', ','); }
 
@@ -174,8 +176,9 @@
       ok($$('#paso-1 input[data-campo="segmento"]').map(function (x) { return x.value; }).join('|') === 'Hogar|Pospago|Prepago', 'UMM: Hogar, Pospago y Prepago');
       ok(/Marca al menos un segmento/.test($('#paso-1').textContent), 'mensaje simple si falta el segmento');
       marcar('Hogar');
-      ok(!$('#paso-1 input[data-campo="peso"]'), 'UMM no pide pesos');
-      escribir($('#paso-2 input[data-campo="totalCasos"]'), '9.000');
+      ok(!$('#paso-1 input[data-campo="peso"]'), 'con un solo segmento no se pide la parte del problema');
+      ok($$('#paso-2 [data-grupo-bloque]').length === 1 && !$('#paso-2 .seg-bloque-titulo') && !$('#paso-2 select[data-campo="segmentoDolor"]'), 'con un solo segmento el paso 2 se ve como siempre (un bloque sin título)');
+      escribir($('#paso-2 input[data-campo="casosGrupo"]'), '9.000');
       ins.dolores.forEach(function (d) {
         $('[data-accion="agregar-dolor"]').click();
         var fd = $$('.dolor').pop();
@@ -200,63 +203,120 @@
       ok($$('.paso-chip.hecho').length === 2, 'pasos 1 y 2 listos (al 3 le falta la evidencia)');
       ok(texto($('.kpi-mov')) === dosDec(r1.real.pp) + ' pp', 'mueve el indicador → ' + texto($('.kpi-mov')));
       ok(/UMM\s*Hogar/.test(texto($('#meta-linea'))), 'el resumen muestra el segmento → ' + texto($('#meta-linea')));
-      ok($('#panel-segmentos').hidden, 'sin Transversal no hay tabla de pesos');
+      ok($('#panel-segmentos').hidden, 'con un solo segmento no hay tabla por segmento');
 
-      // Transversal: segmentos de UMM y UMC a la vez, con peso opcional
+      // Transversal con 2 segmentos: dolores e iniciativas por segmento
       $('[data-accion="tipo-segmento"][data-valor="Transversal"]').click();
       ok($$('#paso-1 input[data-campo="segmento"]').length === 5 && $$('#paso-1 input[data-campo="segmento"]:checked').length === 1, 'Transversal muestra los 5 segmentos y conserva Hogar');
       marcar('Pyme Fijo');
-      var total = dosDec(r1.real.pp);
-      ok(!$('#panel-segmentos').hidden && filasSeg().join('|') === 'HogarNodefinido—|PymeFijoNodefinido—|Sinasignar100%' + total + 'pp|Total100%' + total + 'pp',
-        'sin pesos: «No definido» y todo queda sin asignar → ' + filasSeg().join(' | '));
-      ok(heroe() === pctTxt(r1.real.suficiencia), 'marcar segmentos no cambia la suficiencia');
+      ok(document.activeElement && document.activeElement.value === 'Pyme Fijo', 'el foco vuelve a la casilla que marcaste');
+      ok(bloques().join('|') === 'Hogar|Pyme Fijo', 'paso 2: un bloque por segmento → ' + bloques().join('|'));
+      ok($$('.dolor', bloque('Hogar')).length === 4 && !$('.dolor', bloque('Pyme Fijo')), 'los dolores que ya tenías quedan en Hogar');
+      ok(heroe() === pctTxt(r1.real.suficiencia), 'sin casos en Pyme Fijo, Hogar sigue siendo todo el problema');
+      ok(/Faltan dolores de Pyme Fijo/.test(texto($('#pasos'))), 'el paso 2 dice qué falta → ' + texto($('#pasos')));
+      ok(/Agrega los casos analizados y los dolores de «Pyme Fijo»/.test(texto($('#vigilar'))), 'lo que debes vigilar pide los dolores de Pyme Fijo');
+      ok($$('#paso-3 .aplica').length === 4 && $$('.aplica-seg', $('#paso-3 .ini')).map(texto).join('|') === 'Hogar|Pyme Fijo', 'cada iniciativa tiene «Aplica a» con los 2 segmentos');
+
+      // Casos de Pyme Fijo: 1.000 de 10.000 → 10 % del problema, aún sin dolores
+      escribir($('input[data-campo="casosGrupo"]', bloque('Pyme Fijo')), '1.000');
+      ok(heroe() === pctTxt(0.9 * r1.real.suficiencia), 'Pyme Fijo sin dolores: su 10 % del problema queda sin resolver → ' + heroe());
+      ok(/Faltan los dolores de «Pyme Fijo»: es el 10 %/.test(texto($('#vigilar'))), 'alerta: faltan los dolores de Pyme Fijo (10 %)');
+      ok(/Parte del problema 90,0 %/.test(texto($('.seg-bloque-parte', bloque('Hogar')))), 'el bloque de Hogar dice su parte → ' + texto($('.seg-bloque-parte', bloque('Hogar'))));
+      $('[data-accion="agregar-dolor"]', bloque('Pyme Fijo')).click();
+      var fp = $('.dolor', bloque('Pyme Fijo'));
+      escribir($('textarea[data-campo="nombre"]', fp), 'Demora en la visita');
+      escribir($('input[data-campo="casos"]', fp), '500');
+      var idPyme = fp.getAttribute('data-dolor-fila');
+      ok($$('#paso-3 .cab-seg').map(texto).join('|') === 'Hogar|Hogar|Hogar|Hogar|Pyme Fijo', 'paso 3: cada columna de dolor dice su segmento → ' + $$('#paso-3 .cab-seg').map(texto).join('|'));
+      // La iniciativa 1 resuelve 50 % del dolor de Pyme Fijo; luego deja de aplicar a Hogar
+      var i1 = $('.ini');
+      escribir($$('input[data-campo="efectividad"]', i1).filter(function (c) { return c.dataset.dolor === idPyme; })[0], '50');
+      var esperado = JSON.parse(JSON.stringify(ins));
+      esperado.tipoSegmento = 'Transversal';
+      esperado.segmentos = [{ nombre: 'Hogar', peso: null, casos: 9000 }, { nombre: 'Pyme Fijo', peso: null, casos: 1000 }];
+      esperado.dolores.forEach(function (d, k) { d.segmento = 'Hogar'; d.id = idsDolor[k]; });
+      esperado.dolores.push({ id: idPyme, segmento: 'Pyme Fijo', nombre: 'Demora en la visita', casos: 500 });
+      esperado.iniciativas.forEach(function (x) { var e = {}; Object.keys(x.efectividad).forEach(function (k) { e[idsDolor[Number(k.slice(1)) - 1]] = x.efectividad[k]; }); x.efectividad = e; x.segmentos = []; });
+      esperado.iniciativas[0].efectividad[idPyme] = 0.5;
+      var r2 = Motor.calcular(Motor.normalizarIndicador(esperado));
+      ok(heroe() === pctTxt(r2.real.suficiencia), 'cálculo con 2 segmentos igual al motor → ' + heroe() + ' (motor: ' + pctTxt(r2.real.suficiencia) + ')');
+      ok(!$('#panel-segmentos').hidden && filasSeg().length === 3 && filasSeg()[0].indexOf('Hogar90,0%auto') === 0 && filasSeg()[1].indexOf('PymeFijo10,0%auto' + dosDec(r2.segmentos.filas[1].pp) + 'pp') === 0,
+        'tabla por segmento: parte, mueve y de la brecha → ' + filasSeg().join(' | '));
+      $$('.aplica-seg', i1)[0].click();
+      ok($$('.aplica-seg', $('.ini'))[0].getAttribute('aria-pressed') === 'false' && $$('.celda-caja--no', $('.ini')).length === 4, 'si no aplica a Hogar, sus 4 celdas dicen «No aplica»');
+      esperado.iniciativas[0].segmentos = ['Pyme Fijo'];
+      var r3 = Motor.calcular(Motor.normalizarIndicador(esperado));
+      ok(r3.real.pp < r2.real.pp && heroe() === pctTxt(r3.real.suficiencia), 'y ya no resuelve dolores de Hogar → ' + heroe());
+      $$('.aplica-seg', $('.ini'))[1].click();
+      ok(/al menos a un segmento/.test(texto($('#aviso'))) && $$('.aplica-seg', $('.ini'))[1].getAttribute('aria-pressed') === 'true', 'no deja una iniciativa sin segmentos');
+      $$('.aplica-seg', $('.ini'))[0].click();
+      ok(heroe() === pctTxt(r2.real.suficiencia), 'al volver a aplicar a Hogar vuelve el resultado');
+      esperado.iniciativas[0].segmentos = [];
+
+      // Parte del problema escrita a mano (opcional)
+      ok(peso('Hogar').placeholder === '90' && peso('Pyme Fijo').placeholder === '10', 'la parte automática se ve en el campo → ' + peso('Hogar').placeholder);
       escribir(peso('Hogar'), '60');
-      var h60 = 0.6 * r1.real.pp;
-      ok(texto($('#paso-1 .seg-fila.marcado .seg-aporte')) === 'Aporta ' + dosDec(h60) + ' pp', 'Hogar 60 % aporta el 60 % de lo que mueve → ' + texto($('#paso-1 .seg-aporte')));
-      ok(/Falta repartir 40/.test(texto($('#paso-1'))), 'aviso amable: falta repartir 40 %');
+      ok(/Escrita a mano/.test(texto($$('#paso-1 .seg-aporte')[0])) && /Auto \(de sus casos\): 40,0 %/.test(texto($$('#paso-1 .seg-aporte')[1])), 'Hogar 60 % a mano y Pyme Fijo toma el 40 % que falta');
       var pf = peso('Pyme Fijo');
       pf.focus(); pf.value = '5'; disparar(pf, 'input');
-      ok(!pf.hasAttribute('aria-invalid') && filasSeg()[1].indexOf('Nodefinido') > 0, 'mientras escribes no se guarda un número a medio escribir');
+      ok(!pf.hasAttribute('aria-invalid') && filasSeg()[1].indexOf('auto') > 0, 'mientras escribes no se guarda un número a medio escribir');
       pf.value = '50'; disparar(pf, 'input');
       ok(pf.getAttribute('aria-invalid') === 'true' && /más de 100 %/.test(texto($('#paso-1 .pista--alerta[role="alert"]'))), 'si la suma pasa de 100 % se marca al escribir, con mensaje');
       disparar(pf, 'change'); pf.blur();
-      ok(pf.value === '' && !pf.hasAttribute('aria-invalid') && /No se guardó/.test(texto($('#paso-1 .pista--alerta[role="alert"]'))) && filasSeg()[1].indexOf('Nodefinido') > 0,
-        'al confirmar se rechaza: el campo vuelve al peso anterior y lo dice');
-      escribir(peso('Pyme Fijo'), '40');
-      ok(!peso('Pyme Fijo').hasAttribute('aria-invalid') && !/Falta repartir/.test(texto($('#paso-1'))), '60 % + 40 % = 100 %: ya no falta repartir');
-      var filas = filasSeg();
-      ok(filas[0] === 'Hogar60%' + dosDec(h60) + 'pp' && filas[1] === 'PymeFijo40%' + dosDec(0.4 * r1.real.pp) + 'pp' && filas[2] === 'Sinasignar0%0,00pp' && filas[3] === 'Total100%' + total + 'pp',
-        'tabla del resumen: segmento | peso | aporte, sin asignar y total → ' + filas.join(' | '));
-      escribir(peso('Pyme Fijo'), '');
+      ok(pf.value === '' && !pf.hasAttribute('aria-invalid') && /No se guardó/.test(texto($('#paso-1 .pista--alerta[role="alert"]'))) && filasSeg()[1].indexOf('auto') > 0,
+        'al confirmar se rechaza: el campo vuelve al valor anterior y lo dice');
       ok($('[data-accion="repartir-pesos"]').textContent === 'Repartir en partes iguales', 'hay un botón para repartir en partes iguales');
-      ok(/Falta repartir 40/.test(texto($('#paso-1'))) && filasSeg()[1].indexOf('Nodefinido') > 0, 'dejar el peso vacío no pasa nada: vuelve a «No definido»');
-      ok(heroe() === pctTxt(r1.real.suficiencia), 'los pesos no cambian la suficiencia → ' + heroe());
       $('[data-accion="repartir-pesos"]').click();
-      ok(peso('Hogar').value === '50' && peso('Pyme Fijo').value === '50' && filasSeg()[2] === 'Sinasignar0%0,00pp' && !!$('#aviso [data-accion="deshacer"]'),
+      ok(peso('Hogar').value === '50' && peso('Pyme Fijo').value === '50' && filasSeg()[1].indexOf('PymeFijo50,0%manual') === 0 && !!$('#aviso [data-accion="deshacer"]'),
         'repartir en partes iguales: 50 % y 50 %, y se puede deshacer → ' + filasSeg().join(' | '));
+      esperado.segmentos.forEach(function (sg) { sg.peso = 0.5; });
+      var r4 = Motor.calcular(Motor.normalizarIndicador(esperado));
+      ok(heroe() === pctTxt(r4.real.suficiencia), 'la parte del problema sí cambia la suficiencia, igual que el motor → ' + heroe());
+
+      // Copiar dolores de Hogar a Pyme Fijo (sin casos) y deshacer
+      var sel = $('select[data-campo="copiarDolores"]', bloque('Pyme Fijo'));
+      ok(!!sel && !!$('select[data-campo="copiarDolores"]', bloque('Hogar')), 'cada bloque ofrece copiar los dolores del otro');
+      sel.value = 'Hogar'; disparar(sel, 'change');
+      var copiados = $$('.dolor', bloque('Pyme Fijo'));
+      ok(copiados.length === 5 && $('textarea[data-campo="nombre"]', copiados[1]).value === ins.dolores[0].nombre && $('input[data-campo="casos"]', copiados[1]).value === '',
+        'copia los 4 nombres de Hogar a Pyme Fijo, sin casos');
+      ok(/Copiaste 4 dolores de Hogar a Pyme Fijo/.test(texto($('#aviso'))), 'avisa y ofrece deshacer → ' + texto($('#aviso')));
+      $('#aviso [data-accion="deshacer"]').click();
+      ok($$('.dolor', bloque('Pyme Fijo')).length === 1, 'deshacer quita los copiados');
+      // Mover un dolor a otro segmento y deshacer
+      var mover = $('select[data-campo="segmentoDolor"]', bloque('Pyme Fijo'));
+      mover.value = 'Hogar'; disparar(mover, 'change');
+      ok($$('.dolor', bloque('Hogar')).length === 5 && !$('.dolor', bloque('Pyme Fijo')), 'el dolor pasa a Hogar');
+      $('#aviso [data-accion="deshacer"]').click();
+      // Quitar Pyme Fijo borra sus dolores (se puede deshacer)
+      marcar('Pyme Fijo');
+      ok(bloques().join('|') === 'Hogar' && /Quitaste «Pyme Fijo». Se borró su dolor/.test(texto($('#aviso'))), 'quitar Pyme Fijo borra su dolor y avisa → ' + texto($('#aviso')));
+      $('#aviso [data-accion="deshacer"]').click();
+      ok(bloques().join('|') === 'Hogar|Pyme Fijo' && $$('.dolor', bloque('Pyme Fijo')).length === 1 && heroe() === pctTxt(r4.real.suficiencia), 'deshacer devuelve Pyme Fijo con su dolor → ' + bloques().join('|') + ' ' + heroe());
 
       $('[data-accion="sentido"][data-valor="baja"]').click();
       ok($('.pastel-valor').textContent === '✓', '"baja es mejor" deja la meta cumplida → ' + $('.pastel-valor').textContent);
       ok(dt($('#kpis .kpi')) === 'Mueve el indicador' && $$('#kpis .kpi').length === 4, 'con la meta cumplida siguen las 4 tarjetas');
       $('[data-accion="sentido"][data-valor="sube"]').click();
-      ok(heroe() === pctTxt(r1.real.suficiencia), 'volver a "sube es mejor" → ' + heroe());
+      ok(heroe() === pctTxt(r4.real.suficiencia), 'volver a "sube es mejor" → ' + heroe());
 
-      // Hasta 15 dolores y 15 iniciativas
-      while ($$('.dolor').length < 15) $('[data-accion="agregar-dolor"]').click();
-      $$('.dolor').slice(4).forEach(function (fd, k) {
+      // Hasta 15 dolores por segmento y 15 iniciativas por segmento (30 con 2 segmentos)
+      while ($$('.dolor', bloque('Hogar')).length < 15) $('[data-accion="agregar-dolor"]', bloque('Hogar')).click();
+      $$('.dolor', bloque('Hogar')).slice(4).forEach(function (fd, k) {
         escribir($('textarea[data-campo="nombre"]', fd), 'Dolor extra ' + (k + 1));
         escribir($('input[data-campo="casos"]', fd), '100');
       });
-      var btnD = $('[data-accion="agregar-dolor"]');
-      ok(btnD.disabled && /máximo de 15 dolores/.test(btnD.textContent) && /15 de 15/.test(btnD.textContent), 'máximo 15 dolores → ' + btnD.textContent);
-      while ($$('.ini').length < 15) $('[data-accion="agregar-ini"]').click();
+      var btnD = $('[data-accion="agregar-dolor"]', bloque('Hogar'));
+      ok(btnD.disabled && /máximo de 15 dolores en Hogar/.test(btnD.textContent) && /15 de 15/.test(btnD.textContent), 'máximo 15 dolores por segmento → ' + btnD.textContent);
+      ok(!$('[data-accion="agregar-dolor"]', bloque('Pyme Fijo')).disabled, 'Pyme Fijo todavía puede agregar dolores');
+      while ($$('.ini').length < 30) $('[data-accion="agregar-ini"]').click();
       var btnI = $('[data-accion="agregar-ini"]');
-      ok(btnI.disabled && /15 de 15/.test(btnI.textContent), 'máximo 15 iniciativas → ' + btnI.textContent);
-      ok($('.matriz').style.getPropertyValue('--min-ancho') === (706 + 68 * 15) + 'px' && !!$('.matriz-scroll .matriz'), 'la tabla de 15 dolores se desliza de lado');
-      ok($$('#pastel-svg .porcion').length === 15, 'el pastel muestra 15 porciones');
-      ok($$('#leyenda > li[data-dolor]').length === 6 && $('#leyenda [data-accion="mas-leyenda"]').textContent === 'Ver los 15 dolores', 'la leyenda muestra 6 y ofrece ver los 15');
+      ok(btnI.disabled && /30 de 30/.test(btnI.textContent), 'máximo 15 iniciativas por segmento → ' + btnI.textContent);
+      ok($('.matriz').style.getPropertyValue('--min-ancho') === (706 + 68 * 16) + 'px' && !!$('.matriz-scroll .matriz'), 'la tabla de 16 dolores se desliza de lado');
+      ok($$('#pastel-svg .porcion').length === 16, 'el pastel muestra 16 porciones');
+      ok($$('#leyenda > li[data-dolor]').length === 6 && $('#leyenda [data-accion="mas-leyenda"]').textContent === 'Ver los 16 dolores', 'la leyenda muestra 6 y ofrece ver los 16');
       $('#leyenda [data-accion="mas-leyenda"]').click();
-      ok($$('#leyenda > li[data-dolor]').length === 15, 'al pedirlo muestra los 15 dolores');
+      ok($$('#leyenda > li[data-dolor]').length === 16 && /Pyme Fijo/.test(texto($$('#leyenda > li[data-dolor]').pop())), 'al pedirlo muestra los 16 dolores, con su segmento');
 
       // Mis cálculos: renombrar y abrir (pregunta antes porque hay cambios)
       $('[aria-controls="menu-calculos"]').click();
@@ -279,7 +339,7 @@
       ok($$('.tarjeta[data-id]').length === 2 && titulo() === 'Indicador sin nombre', 'No guardar: abre el cálculo guardado tal como quedó');
       ok(/Abriste «Tablero renombrado»/.test($('#aviso').textContent) && !!$('#aviso [data-accion="deshacer"]'), 'avisa y ofrece deshacer');
       $('#aviso [data-accion="deshacer"]').click();
-      ok(titulo() === 'Instalaciones en fecha (FTTH)' && $$('.dolor').length === 15, 'deshacer devuelve el tablero que no guardaste');
+      ok(titulo() === 'Instalaciones en fecha (FTTH)' && $$('.dolor').length === 16, 'deshacer devuelve el tablero que no guardaste');
       $('[aria-controls="menu-calculos"]').click();
       $('[data-accion="eliminar-calculo"]', $('#menu-calculos')).click();
       ok($('#dlg-pregunta').open && /¿Eliminar «Tablero renombrado»\?/.test($('#preg-titulo').textContent), 'eliminar pide confirmación');
@@ -323,7 +383,8 @@
       var g = guardado();
       var ins = g && g.actual.indicadores.filter(function (x) { return x.nombre === 'Instalaciones en fecha (FTTH)'; })[0];
       ok(!!g && g.version === 3 && !!ins && JSON.stringify(g).indexOf('Churn prueba') < 0, 'se guarda en el navegador (versión 3)');
-      ok(ins && ins.tipoSegmento === 'Transversal' && JSON.stringify(ins.segmentos) === JSON.stringify([{ nombre: 'Hogar', peso: 0.5 }, { nombre: 'Pyme Fijo', peso: 0.5 }]), 'se guardan los segmentos y sus pesos → ' + JSON.stringify(ins && ins.segmentos));
+      ok(ins && ins.tipoSegmento === 'Transversal' && JSON.stringify(ins.segmentos) === JSON.stringify([{ nombre: 'Hogar', peso: 0.5, casos: 9000 }, { nombre: 'Pyme Fijo', peso: 0.5, casos: 1000 }]), 'se guardan los segmentos, sus casos y su parte → ' + JSON.stringify(ins && ins.segmentos));
+      ok(ins && ins.dolores.filter(function (d) { return d.segmento === 'Pyme Fijo'; }).length === 1 && ins.dolores.filter(function (d) { return d.segmento === 'Hogar'; }).length === 15, 'y el segmento de cada dolor');
       terminar();
     }, 500);
   }

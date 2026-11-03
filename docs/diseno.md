@@ -10,7 +10,7 @@ Una sola vista con dos zonas y una regla que se explica en una frase: **lo oscur
 | Riel "Tus indicadores" | Netflix (filas de títulos) | Una tarjeta por indicador con su pastel en miniatura, su suficiencia y su estado. El ejemplo lleva la marca "Ejemplo" |
 | Cartel | Netflix (título destacado) | Nombre del indicador, frase en palabras simples y 4 tarjetas: mueve el indicador / así quedarías / te faltaría / si todo se cumple |
 | El pastel | Apple (anillos de actividad) | Firma visual del producto (ver abajo) |
-| Lo que debes vigilar · Quién aporta más · Aporte por segmento | — | Alertas ordenadas, ranking de iniciativas con "si falla" y, en indicadores Transversales, la tabla segmento / peso / aporte con «Sin asignar» y total |
+| Lo que debes vigilar · Quién aporta más · Aporte por segmento | — | Alertas ordenadas, ranking de iniciativas con "si falla" y, con 2 o más segmentos, la tabla segmento / parte del problema / mueve / de la brecha y total |
 | Taller (pasos 1, 2 y 3) | Notion (bloques editables) | Formularios y tablas que se editan en el mismo lugar; el resultado cambia en vivo |
 
 ## Agregar indicador, nuevo cálculo y Mis cálculos
@@ -20,7 +20,7 @@ Una sola vista con dos zonas y una regla que se explica en una frase: **lo oscur
 - **Mis cálculos** lista los cálculos guardados (nombre editable, fecha y semáforo: cuántos indicadores alcanzan, están cerca o no alcanzan): se abren, se renombran, se duplican y se eliminan (con confirmación). También tiene **Guardar**, **Descargar respaldo** y **Cargar respaldo**.
 - El tablero que se ve se guarda solo a cada cambio; guardar en Mis cálculos es una copia con nombre para volver a abrirla.
 - Si hay cálculos guardados y hace más de 7 días (o nunca) que no se descarga un respaldo, al abrir la página un aviso ofrece **Descargar respaldo** (la fecha queda en `suficiencia.respaldo.v1`).
-- Cada resultado (los 4 KPI, el número del centro, Quién aporta más y Aporte por segmento) tiene un **?** con «qué significa este número» y un ejemplo.
+- Cada resultado (los 4 KPI, el número del centro, Quién aporta más y Resultado por segmento) tiene un **?** con «qué significa este número» y un ejemplo.
 - Cada tarjeta del riel tiene una **papelera** para eliminar ese indicador (aparece al pasar el mouse o con el teclado, y siempre en pantallas táctiles). También se puede deshacer.
 - Al abrir por primera vez hay **un solo ejemplo lleno** (Churn mensual pospago) marcado como "Ejemplo". Un cálculo vacío ofrece verlo, y el menú **Más › Ver el ejemplo lleno** lo vuelve a traer si no está (por ejemplo, en un cálculo nuevo), sin tocar los cálculos propios.
 - Cuando le pones tu propio nombre al ejemplo, deja de ser ejemplo: pasa a ser tu cálculo.
@@ -28,8 +28,11 @@ Una sola vista con dos zonas y una regla que se explica en una frase: **lo oscur
 ## Segmento
 
 - Obligatorio en el paso 1: primero la unidad (**UMM**, **UMC** o **Transversal**) y luego los segmentos. UMM: Hogar, Pospago, Prepago. UMC: Pyme Fijo, Pyme Móvil. Transversal deja marcar segmentos de las dos. Si falta, el paso 1 no queda listo y se pide con un mensaje simple.
-- **Peso del segmento (%)**: opcional y solo en indicadores Transversales. Vacío = no pasa nada. Aporte en pp = peso × lo que mueve el indicador (lo calcula la herramienta). Cada peso va de 0 a 100 y la suma no puede pasar de 100 % (se rechaza con un mensaje); si suma menos, un aviso amable dice cuánto falta repartir.
-- Los pesos no cambian la suficiencia: solo reparten los puntos que mueve el indicador. La herramienta nunca inventa ni reparte pesos por su cuenta: el botón **Repartir en partes iguales** lo hace solo si el usuario lo pulsa (se puede deshacer).
+- **Dolores e iniciativas por segmento** (3-nov-2026): con 2 o más segmentos, el paso 2 tiene un bloque por segmento (título, parte del problema, lo que mueve, sus casos analizados y sus dolores) y cada dolor tiene una lista «Segmento» para moverlo. El paso 3 agrupa las columnas por segmento (cada columna dice su segmento) y cada iniciativa tiene **Aplica a** con un botón por segmento; donde no aplica, la celda dice «No aplica». Con un solo segmento todo se ve como antes.
+- **Parte del problema (%)** (paso 1, con 2 o más segmentos, en cualquier unidad): opcional. Vacía = sale de los casos analizados de cada segmento (el valor automático se ve en el campo). Las escritas mandan y los vacíos se reparten lo que falta según sus casos. La suma no puede pasar de 100 % (se rechaza con mensaje). **Repartir en partes iguales** solo si el usuario lo pulsa (se puede deshacer). Reemplaza el «peso del segmento» del 2-nov, que solo repartía los puntos al final y no cambiaba la suficiencia.
+- Quitar un segmento borra sus dolores (con Deshacer); si era el último, sus dolores quedan «sin segmento» y pasan al siguiente segmento que se marque. Marcar el primer segmento le pasa los dolores que ya había.
+- «Lo que debes vigilar» avisa si un segmento no tiene dolores (con la parte del problema que queda sin resolver), si le faltan los casos analizados o si hay dolores sin segmento; el paso 2 no queda listo hasta resolverlo.
+- **Copiar los dolores de…** copia nombres y fuentes de otro segmento (sin casos) para no escribir dos veces la misma lista.
 
 ## El pastel
 
@@ -59,7 +62,7 @@ Reglas: con "reducir movimiento" activado en el sistema no hay animaciones; cada
 | Hoja | Qué tiene |
 |---|---|
 | Resumen | Cómo leer el archivo, el comparativo de todos los indicadores con su semáforo y un enlace a cada hoja |
-| Una por indicador | Resultado, **cálculo paso a paso** (problema, brecha, impacto, lo resuelto, puntos, suficiencia, semáforo y lectura en palabras simples), lo que debes vigilar, el ranking y los pasos 1 (con el segmento y, si hay pesos, la tabla segmento / peso / aporte), 2 y 3 |
+| Una por indicador | Resultado, **cálculo paso a paso** (problema, brecha, impacto, lo resuelto, puntos, suficiencia, semáforo y lectura en palabras simples), lo que debes vigilar, el ranking y los pasos 1 (con el segmento y, con varios segmentos, la tabla segmento / casos analizados / parte del problema / mueve / de la brecha), 2 (con la fila Segmento) y 3 (con la columna «Aplica a» y celdas «No aplica») |
 | Ajustes | Semáforo y umbrales de las alertas |
 | Glosario | Las palabras, las etiquetas y cómo volver a abrir el archivo en la calculadora |
 
@@ -71,7 +74,7 @@ Reglas: con "reducir movimiento" activado en el sistema no hay animaciones; cada
 
 ## Límites
 
-- Tablero y Excel exportado: hasta **15 dolores y 15 iniciativas** por indicador. Con muchos dolores, la tabla del paso 3 se desliza de lado y el número y el nombre de la iniciativa se quedan fijos.
+- Tablero y Excel exportado: hasta **15 dolores por segmento y 15 iniciativas por segmento marcado** (15 con un solo segmento). Con muchos dolores, la tabla del paso 3 se desliza de lado y el número y el nombre de la iniciativa se quedan fijos.
 - Plantilla de Excel: 6 dolores y 8 iniciativas por hoja (su diseño es de posiciones fijas).
 
 ## Colores (Claro)
@@ -105,7 +108,7 @@ Si no hay internet, se usan las fuentes del sistema y todo sigue funcionando.
 | `assets/css/app.css` | Estilos con tokens; diseño responsivo con *container queries* |
 | `tests/paridad_excel.test.js` | Comprueba que el motor da lo mismo que el Excel (hasta 12 decimales) |
 | `tests/excel.test.js` | Comprueba que el .xlsx está bien formado, se relee igual y que se lee la plantilla real |
-| `tests/segmentos.test.js` | Peso por segmento (con y sin pesos, suma mayor a 100 %), migración del guardado y respaldo .json |
+| `tests/segmentos.test.js` | Dolores e iniciativas por segmento, parte del problema (automática, a mano, suma mayor a 100 %), límites, migración del guardado y respaldo .json |
 | `tests/navegador/*.js` | Interacción, importar la plantilla, exportar e importar Excel, persistencia (dos aperturas con el mismo perfil), celular a 390 px y animaciones; las corre `herramientas/probar_tablero.ps1` |
 | `herramientas/*.ps1` | Generar y verificar la plantilla de Excel, y probar el tablero |
 

@@ -57,13 +57,15 @@
   // Indicadores de prueba
   var ej = SuficienciaEjemplos();
   var grande = { id: 'grande', nombre: 'Disponibilidad «red» & <móvil> "5G"', sentido: 'sube', unidad: '%', ejecutado: 97.5, meta: 99.2, ideal: null, totalCasos: 15000, dolores: [], iniciativas: [],
-    tipoSegmento: 'Transversal', segmentos: [{ nombre: 'Hogar', peso: 0.5 }, { nombre: 'Prepago', peso: null }, { nombre: 'Pyme Móvil', peso: 0.25 }] };
-  for (var j = 0; j < 15; j++) grande.dolores.push({ id: 'g' + j, nombre: 'Dolor ' + (j + 1) + (j === 0 ? ' con un nombre bastante largo para ver cómo se ajusta en la celda' : ''), casos: 1000 + j * 100, atribucionManual: null, evidencia: j % 3 ? 'Fuente ' + j : '' });
+    tipoSegmento: 'Transversal', segmentos: [{ nombre: 'Hogar', peso: 0.5, casos: 9000 }, { nombre: 'Prepago', peso: null, casos: 3000 }, { nombre: 'Pyme Móvil', peso: 0.25, casos: 3000 }] };
+  // Dolores por segmento: 7 de Hogar, 5 de Prepago y 3 de Pyme Móvil
+  var segG = function (j) { return j < 7 ? 'Hogar' : (j < 12 ? 'Prepago' : 'Pyme Móvil'); };
+  for (var j = 0; j < 15; j++) grande.dolores.push({ id: 'g' + j, segmento: segG(j), nombre: 'Dolor ' + (j + 1) + (j === 0 ? ' con un nombre bastante largo para ver cómo se ajusta en la celda' : ''), casos: 1000 + j * 100, atribucionManual: null, evidencia: j % 3 ? 'Fuente ' + j : '' });
   for (var i = 0; i < 15; i++) {
     var ef = {};
     ef['g' + i] = 0.5;
     ef['g' + ((i + 3) % 15)] = 0.2;
-    grande.iniciativas.push({ id: 'n' + i, nombre: 'Iniciativa ' + (i + 1), efectividad: ef, ejecucion: i === 4 ? null : 0.5 + (i % 5) * 0.1, estado: ['En plan', 'En riesgo', 'Retrasada'][i % 3], responsable: 'Área ' + i, fecha: i % 2 ? '2027-0' + (1 + (i % 9)) + '-15' : '', evidencia: i % 4 ? 'Piloto ' + i : '' });
+    grande.iniciativas.push({ id: 'n' + i, nombre: 'Iniciativa ' + (i + 1), segmentos: i % 4 === 1 ? ['Hogar'] : (i % 4 === 2 ? ['Prepago', 'Pyme Móvil'] : []), efectividad: ef, ejecucion: i === 4 ? null : 0.5 + (i % 5) * 0.1, estado: ['En plan', 'En riesgo', 'Retrasada'][i % 3], responsable: 'Área ' + i, fecha: i % 2 ? '2027-0' + (1 + (i % 9)) + '-15' : '', evidencia: i % 4 ? 'Piloto ' + i : '' });
   }
   var vacio = Motor.nuevoIndicador();
   var datos = { app: 'Suficiencia 2027', version: 2, sel: 'ej-churn', params: Motor.PARAMS_DEFECTO, indicadores: [ej[0], ej[1], grande, vacio] };
@@ -129,16 +131,18 @@
       ok(tChurn.indexOf('CÓMO SE CALCULA LA SUFICIENCIA   ·   PASO A PASO') >= 0 && tChurn.indexOf('Suficiencia = puntos ÷ brecha') >= 0 && tChurn.indexOf('En palabras simples') >= 0,
         'cada hoja trae el cálculo paso a paso y la lectura en palabras simples');
       ok(tChurn.indexOf('Tipo de segmento') >= 0 && tChurn.indexOf('UMM') >= 0 && tChurn.indexOf('Pospago') >= 0, 'la hoja dice el segmento (UMM · Pospago)');
-      ok(tChurn.indexOf('Peso del segmento (%)') < 0, 'sin pesos definidos no aparece la tabla de pesos');
+      ok(tChurn.indexOf('Parte del problema usada') < 0 && tChurn.indexOf('Aplica a (segmentos)') < 0 && tChurn.indexOf('Casos analizados') >= 0,
+        'con un solo segmento no aparece la tabla por segmento ni «Aplica a», y los casos analizados siguen en el paso 2');
       var gr = libro.hojas[libro.nombres[3]];
       var tGr = celdas(gr);
-      ok(tGr.indexOf('Peso del segmento (%)') >= 0 && tGr.indexOf('Sin asignar') >= 0 && tGr.indexOf('No definido') >= 0, 'con pesos: segmento, peso, «No definido», sin asignar y total');
+      ok(tGr.indexOf('Parte del problema escrita (%)') >= 0 && tGr.indexOf('Parte del problema usada') >= 0 && tGr.indexOf('Aplica a (segmentos)') >= 0 && tGr.indexOf('No aplica') >= 0 && tGr.indexOf('Pyme Móvil') >= 0,
+        'con varios segmentos: tabla por segmento, «Aplica a» y celdas «No aplica»');
       var rGr = Motor.calcular(Motor.normalizarIndicador(grande));
       var refDe = function (h, valor) { return Object.keys(h).filter(function (k) { return h[k].v === valor; })[0]; };
       var fH = Number(refDe(gr, 'Hogar').slice(1));
-      var fSin = Number(refDe(gr, 'Sin asignar').slice(1));
-      ok(gr['C' + fH].v === 0.5 && Math.abs(gr['D' + fH].v - 0.5 * rGr.real.pp) < 1e-12, 'Hogar: 50 % y su aporte en pp = motor');
-      ok(Math.abs(gr['C' + fSin].v - 0.25) < 1e-12 && Math.abs(gr['D' + fSin].v - 0.25 * rGr.real.pp) < 1e-12, 'sin asignar: 25 % y sus pp');
+      var fPre = fH + 1;
+      ok(gr['B' + fPre].v === 'Prepago' && gr['C' + fH].v === 9000 && gr['D' + fH].v === 0.5 && Math.abs(gr['F' + fH].v - rGr.segmentos.filas[0].pp) < 1e-12, 'Hogar: casos, 50 % escrito y lo que mueve = motor');
+      ok(gr['D' + fPre] === undefined && Math.abs(gr['E' + fPre].v - 0.25) < 1e-12 && Math.abs(gr['F' + fPre].v - rGr.segmentos.filas[1].pp) < 1e-12, 'Prepago: sin parte escrita, usa el 25 % que falta');
       var paso3 = Object.keys(gr).filter(function (k) { return gr[k].v === 'Iniciativa'; }).map(function (k) { return k.replace(/^[A-Z]+/, ''); });
       var cab3 = Object.keys(gr).filter(function (k) { return paso3.indexOf(k.replace(/^[A-Z]+/, '')) >= 0; }).map(function (k) { return gr[k].v; });
       ok(cab3.indexOf('Ejecución a 2027') >= 0 && cab3.indexOf('Estado') < 0, 'el paso 3 del Excel ya no repite la columna «Estado»');
@@ -158,11 +162,12 @@
     ok(Math.abs(ra.real.suficiencia - rb.real.suficiencia) < 1e-12 && Math.abs(ra.plan.suficiencia - rb.plan.suficiencia) < 1e-12,
       que + ': misma suficiencia (' + Math.round(ra.real.suficiencia * 100) + ' % / ' + Math.round(ra.plan.suficiencia * 100) + ' %)');
     var resumen = function (x) {
-      return JSON.stringify([x.nombre, x.sentido, x.unidad, x.ejecutado, x.meta, x.ideal, x.totalCasos,
-        x.dolores.map(function (d) { return [d.nombre, d.casos, d.atribucionManual, d.evidencia]; }),
-        x.iniciativas.map(function (y) { return [y.nombre, y.ejecucion, y.responsable, y.fecha, y.evidencia, x.dolores.map(function (d) { return y.efectividad[d.id] === undefined ? null : y.efectividad[d.id]; })]; })]);
+      // La efectividad en un segmento donde la iniciativa no aplica no se exporta (la celda dice «No aplica»)
+      return JSON.stringify([x.nombre, x.sentido, x.unidad, x.ejecutado, x.meta, x.ideal, x.totalCasos, x.segmentos,
+        x.dolores.map(function (d) { return [d.segmento, d.nombre, d.casos, d.atribucionManual, d.evidencia]; }),
+        x.iniciativas.map(function (y) { return [y.nombre, y.segmentos, y.ejecucion, y.responsable, y.fecha, y.evidencia, x.dolores.map(function (d) { return y.efectividad[d.id] === undefined || !Motor.aplica(x, y, d) ? null : y.efectividad[d.id]; })]; })]);
     };
-    ok(resumen(a) === resumen(b), que + ': mismos datos, dolores e iniciativas');
+    ok(resumen(a) === resumen(b), que + ': mismos datos, dolores e iniciativas' + (resumen(a) === resumen(b) ? '' : '\n  A ' + resumen(a).slice(0, 900) + '\n  B ' + resumen(b).slice(0, 900)));
   }
 
   function vuelta1() {
@@ -178,7 +183,9 @@
       var g = inds.filter(function (x) { return x.nombre === grande.nombre; })[0];
       ok(g && g.dolores.length === 15 && g.iniciativas.length === 15, 'el indicador grande vuelve con 15 dolores y 15 iniciativas');
       ok(g && g.iniciativas[4].ejecucion === null, 'una ejecución vacía sigue vacía');
-      ok(g && g.tipoSegmento === 'Transversal' && JSON.stringify(g.segmentos) === JSON.stringify(Motor.normalizarIndicador(grande).segmentos), 'el segmento y sus pesos vuelven del Excel → ' + JSON.stringify(g && g.segmentos));
+      ok(g && g.tipoSegmento === 'Transversal' && JSON.stringify(g.segmentos) === JSON.stringify(Motor.normalizarIndicador(grande).segmentos), 'los segmentos, sus casos y su parte vuelven del Excel → ' + JSON.stringify(g && g.segmentos));
+      ok(g && g.dolores.map(function (d) { return d.segmento; }).join() === grande.dolores.map(function (d) { return d.segmento; }).join(), 'el segmento de cada dolor vuelve del Excel');
+      ok(g && JSON.stringify(g.iniciativas.slice(0, 3).map(function (x) { return x.segmentos; })) === '[[],["Hogar"],["Prepago","Pyme Móvil"]]', '«Aplica a» vuelve del Excel → ' + JSON.stringify(g && g.iniciativas.slice(0, 3).map(function (x) { return x.segmentos; })));
       var c0 = inds.filter(function (x) { return x.nombre === ej[0].nombre; })[0];
       ok(c0 && c0.tipoSegmento === 'UMM' && c0.segmentos.length === 1 && c0.segmentos[0].nombre === 'Pospago', 'el segmento sin peso también vuelve');
       ok(!/En riesgo/.test(JSON.stringify(leido.hojas)), 'el estado ya no cuenta: el Excel no tiene la etiqueta «En riesgo»');

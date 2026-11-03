@@ -146,3 +146,17 @@ El resultado y las decisiones de diseño están en [diseno.md](diseno.md).
 5. Tarjeta **Mueve el indicador**: puntos que se mueve el indicador con la suficiencia calculada (suficiencia × brecha).
 6. Los nombres nuevos se usan en el tablero, el Excel exportado y la plantilla de Excel.
 7. Hasta 15 dolores y 15 iniciativas en el tablero y en el Excel exportado (la plantilla mantiene 6 y 8).
+
+## Fase 4 · Dolores e iniciativas por segmento (3-nov-2026)
+
+### Pedido
+
+> En el paso del indicador el usuario elige los segmentos a los cuales desea calcular la suficiencia, pero en los pasos de dolores e iniciativas no hay forma de diferenciar qué dolores e iniciativas corresponden a cada segmento. Si selecciono Hogar y Pospago, o Transversal Hogar y Pyme Fijo, debe pedirme los dolores e iniciativas para los segmentos seleccionados. La lógica numérica del cálculo de la suficiencia también debe contemplar estos cambios, de la manera más óptima y entendible para los usuarios.
+
+### Cómo se resolvió
+
+1. Cada segmento tiene sus casos analizados y sus dolores (paso 2, un bloque por segmento). Su parte del problema sale de sus casos, o se escribe a mano en el paso 1.
+2. Cada iniciativa dice a qué segmentos aplica (paso 3) y solo resuelve dolores de esos segmentos.
+3. El resultado muestra lo que mueve cada segmento; la suma es lo que mueve el indicador.
+4. Con un solo segmento el cálculo es idéntico (paridad con la plantilla intacta). Lo guardado antes da el mismo resultado; los pesos viejos no se usan porque significaban otra cosa.
+5. Excel exportado e importado con la tabla por segmento, la fila Segmento y la columna «Aplica a». La plantilla (.ps1, solo Windows) no se tocó: sigue sin segmentos y se importa como antes.

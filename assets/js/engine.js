@@ -10,9 +10,11 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // La plantilla de Excel trae espacio para 6 dolores y 8 iniciativas; el tablero y su exportación, para 15.
+  // La plantilla de Excel trae espacio para 6 dolores y 8 iniciativas; el tablero y su exportación, para 15
+  // dolores por segmento y 15 iniciativas por segmento marcado (una iniciativa puede servir a varios).
   var MAX_DOLORES = 15;
   var MAX_INICIATIVAS = 15;
+  function maxIniciativas(ind) { return MAX_INICIATIVAS * Math.max(1, ((ind && ind.segmentos) || []).length); }
   // El estado se sigue leyendo de la plantilla y de los archivos, pero ya no cambia ningún resultado
   var ESTADOS = ['En plan', 'En riesgo', 'Retrasada'];
   // Segmentos por unidad de negocio. Un indicador Transversal puede marcar segmentos de las dos.
@@ -45,6 +47,40 @@
     return color;
   }
 
+  // Los grupos del pastel: un grupo por segmento marcado y, si hay dolores sin segmento (de antes o de la
+  // plantilla), un grupo «sin segmento» que usa los casos analizados del indicador.
+  // Parte del problema de cada grupo: la que escribe el usuario (peso) o, si no, la que sale de sus casos
+  // analizados (casos del grupo ÷ casos de los grupos automáticos, sobre lo que no se repartió a mano).
+  // Con un solo grupo, ese grupo es todo el problema: así el cálculo de un segmento es el de siempre.
+  function segmentoDe(ind, d) {
+    var s = d && d.segmento;
+    return s && (ind.segmentos || []).some(function (x) { return x.nombre === s; }) ? s : '';
+  }
+  function grupos(ind) {
+    var lista = (ind.segmentos || []).map(function (s) { return { nombre: s.nombre, casos: s.casos, peso: s.peso }; });
+    if ((ind.dolores || []).some(function (d) { return segmentoDe(ind, d) === ''; }) || !lista.length) {
+      lista.push({ nombre: '', casos: ind.totalCasos, peso: null });
+    }
+    var varios = lista.length > 1;
+    lista.forEach(function (g) { g.manual = varios && typeof g.peso === 'number' && isFinite(g.peso) ? g.peso : null; });
+    var sumaManual = suma(lista.map(function (g) { return g.manual || 0; }));
+    var autos = lista.filter(function (g) { return g.manual === null; });
+    var casosAutos = suma(autos.map(function (g) { return Math.max(0, n(g.casos)); }));
+    var resto = Math.max(0, 1 - sumaManual);
+    lista.forEach(function (g) {
+      g.parteAuto = !varios ? 1 : (casosAutos === 0 ? 0 : resto * Math.max(0, n(g.casos)) / casosAutos);
+      g.parte = g.manual !== null ? g.manual : g.parteAuto;
+    });
+    return lista;
+  }
+  // ¿La iniciativa trabaja sobre este dolor? Sí, si es para todos los segmentos ([]), si el dolor no tiene
+  // segmento o si el segmento del dolor está entre los de la iniciativa.
+  function aplica(ind, ini, d) {
+    var seg = segmentoDe(ind, d);
+    var lista = Array.isArray(ini.segmentos) ? ini.segmentos : [];
+    return seg === '' || !lista.length || lista.indexOf(seg) >= 0;
+  }
+
   function calcular(ind, params) {
     var p = params || PARAMS_DEFECTO;
     var dolores = ind.dolores || [];
@@ -57,20 +93,32 @@
     var brecha = (vacio(ind.sentido) || vacio(ind.ejecutado) || vacio(ind.meta)) ? 0
       : Math.max(0, sube ? n(ind.meta) - n(ind.ejecutado) : n(ind.ejecutado) - n(ind.meta));
 
-    // Paso 2 · prevalencia y parte del pastel (atribución) de cada dolor
-    var total = n(ind.totalCasos);
-    var prevalencia = dolores.map(function (d) {
+    // Paso 2 · prevalencia (casos ÷ casos analizados de su segmento) y parte del pastel (atribución):
+    // dentro de cada segmento se reparte su parte del problema según el % dolor.
+    var gs = grupos(ind);
+    var grupoDe = {};
+    gs.forEach(function (g) { grupoDe[g.nombre] = g; });
+    var segDolor = dolores.map(function (d) { return segmentoDe(ind, d); });
+    var prevalencia = dolores.map(function (d, j) {
+      var total = n(grupoDe[segDolor[j]].casos);
       return (n(d.casos) === 0 || total === 0) ? 0 : n(d.casos) / total;
     });
     var sumaPrev = suma(prevalencia);
-    var atribAuto = prevalencia.map(function (v) { return sumaPrev === 0 ? 0 : v / sumaPrev; });
+    var prevGrupo = {};
+    gs.forEach(function (g) { prevGrupo[g.nombre] = 0; });
+    prevalencia.forEach(function (v, j) { prevGrupo[segDolor[j]] += v; });
+    var atribAuto = prevalencia.map(function (v, j) {
+      var sg = prevGrupo[segDolor[j]];
+      return sg === 0 ? 0 : grupoDe[segDolor[j]].parte * v / sg;
+    });
     var atribucion = dolores.map(function (d, j) {
       return vacio(d.atribucionManual) ? atribAuto[j] : n(d.atribucionManual);
     });
     var sumaAtrib = suma(atribucion);
 
-    // Paso 3 · lo que DEJA cada iniciativa en cada dolor = 1 − efectividad (× ejecución), con tope
-    function efectividad(ini, d) { return n((ini.efectividad || {})[d.id]); }
+    // Paso 3 · lo que DEJA cada iniciativa en cada dolor = 1 − efectividad (× ejecución), con tope.
+    // Una iniciativa no toca los dolores de los segmentos donde no aplica.
+    function efectividad(ini, d) { return aplica(ind, ini, d) ? n((ini.efectividad || {})[d.id]) : 0; }
     var dejaPlan = inis.map(function (ini) {
       return dolores.map(function (d) { return 1 - Math.min(p.tope, efectividad(ini, d)); });
     });
@@ -168,7 +216,17 @@
       .map(function (x) { return x.id; });
 
     var nombradas = inis.filter(function (x) { return !vacio(x.nombre); }).length;
-    var segmentos = repartirSegmentos(ind, real.pp);
+    var segmentos = resumenSegmentos(ind, gs, function (nombre) {
+      var r = { real: 0, plan: 0, dolores: 0, atribucion: 0 };
+      dolores.forEach(function (d, j) {
+        if (segDolor[j] !== nombre) return;
+        r.real += ppDolorReal[j];
+        r.plan += ppDolorPlan[j];
+        r.atribucion += atribucion[j];
+        r.dolores += 1;
+      });
+      return r;
+    }, brecha, real.pp);
     var faltanDatos = resultadoIniciativas.some(function (x) { return x.revision !== '' && x.revision !== 'OK'; });
 
     return {
@@ -190,29 +248,43 @@
     };
   }
 
-  // Paso 5 (opcional) · reparto por segmento. Solo un indicador Transversal lleva pesos, y solo los que
-  // escribe el usuario: aporte = peso × puntos que mueve el indicador. Lo que no se reparte queda «sin asignar».
-  // No toca la suficiencia: con o sin pesos el resultado del indicador es el mismo.
-  function repartirSegmentos(ind, total) {
-    var transversal = ind.tipoSegmento === 'Transversal';
-    var filas = (ind.segmentos || []).map(function (s) {
-      var peso = transversal && typeof s.peso === 'number' && isFinite(s.peso) ? s.peso : null;
-      return { nombre: s.nombre, peso: peso, pp: peso === null ? null : peso * total };
+  // Paso 5 · resultado por segmento. Cada segmento recupera lo que resuelven las iniciativas en SUS dolores,
+  // así que la suma de los segmentos es exactamente lo que mueve el indicador (y su suficiencia, la del total).
+  // filas: una por grupo (nombre '' = dolores sin segmento) con su parte del problema, sus puntos y su
+  // aporte a la suficiencia. chequeo: SIN SEGMENTO · PASA DE 100 (pesos) · SIN CASOS · NO SUMA 100 · OK.
+  function resumenSegmentos(ind, gs, sumar, brecha, total) {
+    var varios = gs.length > 1;
+    var filas = gs.map(function (g) {
+      var x = sumar(g.nombre);
+      return {
+        nombre: g.nombre,
+        casos: vacio(g.casos) ? null : n(g.casos),
+        peso: g.manual,
+        parteAuto: g.parteAuto,
+        parte: g.parte,
+        dolores: x.dolores,
+        atribucion: x.atribucion,
+        pp: x.real,
+        ppPlan: x.plan,
+        suficiencia: brecha === 0 ? 0 : x.real / brecha,
+        suficienciaPlan: brecha === 0 ? 0 : x.plan / brecha
+      };
     });
     var sumaPesos = suma(filas.map(function (f) { return f.peso || 0; }));
-    var conPesos = filas.some(function (f) { return f.peso !== null; });
-    var pasa = sumaPesos > 1 + 1e-9;
-    if (pasa) filas.forEach(function (f) { f.pp = null; });
-    var resto = total - suma(filas.map(function (f) { return f.pp || 0; }));
-    // Pesos como 1/3 + 1/3 + 1/3 dejan un resto de 1e-17: se muestra 0, no «-0,00»
-    if (Math.abs(resto) < 1e-12) resto = 0;
+    var sumaPartes = suma(filas.map(function (f) { return f.parte; }));
+    var chequeo = 'OK';
+    if (!(ind.segmentos || []).length) chequeo = 'SIN SEGMENTO';
+    else if (varios && sumaPesos > 1 + 1e-9) chequeo = 'PASA DE 100';
+    else if (varios && sumaPartes === 0) chequeo = 'SIN CASOS';
+    else if (varios && Math.abs(sumaPartes - 1) > 0.0005) chequeo = 'NO SUMA 100';
     return {
       filas: filas,
+      varios: varios,
       total: total,
-      conPesos: conPesos,
+      conPesos: filas.some(function (f) { return f.peso !== null; }),
       sumaPesos: sumaPesos,
-      sinAsignar: { peso: pasa ? 0 : Math.max(0, 1 - sumaPesos), pp: pasa ? null : resto },
-      chequeo: !filas.length ? 'SIN SEGMENTO' : (pasa ? 'PASA DE 100' : (conPesos && sumaPesos < 1 - 1e-9 ? 'FALTA REPARTIR' : 'OK'))
+      sumaPartes: sumaPartes,
+      chequeo: chequeo
     };
   }
 
@@ -243,9 +315,43 @@
       ejemplo: false, dolores: [], iniciativas: []
     };
   }
-  function nuevoDolor() { return { id: nuevoId('d-'), nombre: '', casos: null, atribucionManual: null, evidencia: '' }; }
+  function nuevoDolor(segmento) { return { id: nuevoId('d-'), segmento: segmento || '', nombre: '', casos: null, atribucionManual: null, evidencia: '' }; }
+  // segmentos: [] = aplica a todos los segmentos del indicador
   function nuevaIniciativa() {
-    return { id: nuevoId('i-'), nombre: '', efectividad: {}, ejecucion: 1, estado: 'En plan', responsable: '', fecha: '', evidencia: '' };
+    return { id: nuevoId('i-'), nombre: '', segmentos: [], efectividad: {}, ejecucion: 1, estado: 'En plan', responsable: '', fecha: '', evidencia: '' };
+  }
+
+  // Deja los dolores agrupados en el orden de los segmentos (los sin segmento al final), sin cambiar el
+  // orden dentro de cada segmento: así la numeración D1, D2… y las columnas del paso 3 van por segmento.
+  function ordenarDolores(ind) {
+    var orden = (ind.segmentos || []).map(function (s) { return s.nombre; });
+    var lugar = function (d) { var k = orden.indexOf(segmentoDe(ind, d)); return k < 0 ? orden.length : k; };
+    ind.dolores = ind.dolores.map(function (d, j) { return { d: d, j: j }; })
+      .sort(function (a, b) { return lugar(a.d) - lugar(b.d) || a.j - b.j; })
+      .map(function (x) { return x.d; });
+    return ind;
+  }
+  // Con un solo segmento marcado, los dolores sin segmento (de antes, de la plantilla o de un segmento que
+  // se quitó) pasan a ese segmento con sus casos analizados: el resultado no cambia.
+  function acomodarSegmentos(ind) {
+    ind.dolores.forEach(function (d) { if (!segmentoDe(ind, d)) d.segmento = ''; });
+    if (ind.segmentos.length === 1) {
+      var s = ind.segmentos[0];
+      var sueltos = ind.dolores.filter(function (d) { return d.segmento === ''; });
+      if (sueltos.length || !vacio(ind.totalCasos)) {
+        sueltos.forEach(function (d) { d.segmento = s.nombre; });
+        if (vacio(s.casos)) s.casos = ind.totalCasos;
+        ind.totalCasos = null;
+      }
+    }
+    // Los casos del indicador solo cuentan para los dolores sin segmento: si no queda ninguno, sobran
+    if (ind.segmentos.length && !ind.dolores.some(function (d) { return d.segmento === ''; })) ind.totalCasos = null;
+    var marcados = ind.segmentos.map(function (s) { return s.nombre; });
+    ind.iniciativas.forEach(function (x) {
+      x.segmentos = (x.segmentos || []).filter(function (nombre) { return marcados.indexOf(nombre) >= 0; });
+      if (x.segmentos.length === marcados.length) x.segmentos = [];
+    });
+    return ordenarDolores(ind);
   }
 
   function texto(v, max) { return vacio(v) ? '' : String(v).slice(0, max || 200); }
@@ -266,28 +372,40 @@
     ind.ideal = numero(o.ideal);
     ind.totalCasos = numero(o.totalCasos);
     ind.ejemplo = o.ejemplo === true;
-    // Segmentos: solo los de la unidad elegida, en el orden del catálogo; el peso solo si es Transversal
+    // Segmentos: solo los de la unidad elegida, en el orden del catálogo, con sus casos analizados y su
+    // peso (parte del problema escrita a mano, opcional).
     ind.tipoSegmento = TIPOS_SEGMENTO.indexOf(o.tipoSegmento) >= 0 ? o.tipoSegmento : '';
     var marcados = Array.isArray(o.segmentos) ? o.segmentos : [];
+    // Antes del 3 de nov el peso solo repartía los puntos al final y los segmentos no traían casos: ese peso
+    // no significa «parte del problema», así que no se usa (si se usara, cambiaría el resultado guardado).
+    var pesoDeAntes = marcados.some(function (x) { return x && typeof x === 'object'; }) &&
+      marcados.every(function (x) { return !x || typeof x !== 'object' || x.casos === undefined; });
     ind.segmentos = segmentosDe(ind.tipoSegmento).map(function (nombre) {
       var s = marcados.filter(function (x) { return x && x.nombre === nombre; })[0];
-      return s ? { nombre: nombre, peso: ind.tipoSegmento === 'Transversal' ? fraccion(s.peso) : null } : null;
+      return s ? { nombre: nombre, peso: pesoDeAntes ? null : fraccion(s.peso), casos: numero(s.casos) } : null;
     }).filter(Boolean);
+    var nombresSeg = ind.segmentos.map(function (s) { return s.nombre; });
     var vistos = {};
-    ind.dolores = (Array.isArray(o.dolores) ? o.dolores : []).slice(0, MAX_DOLORES).map(function (d) {
+    var porGrupo = {};
+    ind.dolores = (Array.isArray(o.dolores) ? o.dolores : []).map(function (d) {
       d = d && typeof d === 'object' ? d : {};
+      var seg = nombresSeg.indexOf(d.segmento) >= 0 ? d.segmento : '';
+      porGrupo[seg] = (porGrupo[seg] || 0) + 1;
+      if (porGrupo[seg] > MAX_DOLORES) return null;
       var id = typeof d.id === 'string' && d.id && !vistos[d.id] ? d.id.slice(0, 60) : nuevoId('d-');
       vistos[id] = true;
-      return { id: id, nombre: texto(d.nombre, 120), casos: numero(d.casos), atribucionManual: fraccion(d.atribucionManual), evidencia: texto(d.evidencia, 300) };
-    });
-    ind.iniciativas = (Array.isArray(o.iniciativas) ? o.iniciativas : []).slice(0, MAX_INICIATIVAS).map(function (x) {
+      return { id: id, segmento: seg, nombre: texto(d.nombre, 120), casos: numero(d.casos), atribucionManual: fraccion(d.atribucionManual), evidencia: texto(d.evidencia, 300) };
+    }).filter(Boolean);
+    ind.iniciativas = (Array.isArray(o.iniciativas) ? o.iniciativas : []).slice(0, maxIniciativas(ind)).map(function (x) {
       x = x && typeof x === 'object' ? x : {};
       var efect = {};
       var origen = x.efectividad && typeof x.efectividad === 'object' ? x.efectividad : {};
       ind.dolores.forEach(function (d) { var v = fraccion(origen[d.id]); if (v !== null) efect[d.id] = v; });
+      var segs = Array.isArray(x.segmentos) ? x.segmentos : [];
       return {
         id: typeof x.id === 'string' && x.id ? x.id.slice(0, 60) : nuevoId('i-'),
         nombre: texto(x.nombre, 120),
+        segmentos: nombresSeg.filter(function (nombre) { return segs.indexOf(nombre) >= 0; }),
         efectividad: efect,
         ejecucion: fraccion(x.ejecucion),
         estado: ESTADOS.indexOf(x.estado) >= 0 ? x.estado : 'En plan',
@@ -296,7 +414,7 @@
         evidencia: texto(x.evidencia, 300)
       };
     });
-    return ind;
+    return acomodarSegmentos(ind);
   }
 
   function copiarParams(p) { return JSON.parse(JSON.stringify(p)); }
@@ -366,7 +484,11 @@
     SEGMENTOS: SEGMENTOS,
     TIPOS_SEGMENTO: TIPOS_SEGMENTO,
     segmentosDe: segmentosDe,
-    repartirSegmentos: repartirSegmentos,
+    segmentoDe: segmentoDe,
+    aplica: aplica,
+    maxIniciativas: maxIniciativas,
+    ordenarDolores: ordenarDolores,
+    acomodarSegmentos: acomodarSegmentos,
     revisarPesos: revisarPesos,
     normalizarEspacio: normalizarEspacio,
     VERSION_ESPACIO: VERSION_ESPACIO,

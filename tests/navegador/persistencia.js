@@ -1,5 +1,5 @@
 // Prueba de lo que se guarda en el navegador. La ejecuta herramientas/probar_tablero.ps1 dos veces con el mismo perfil:
-//  1.ª vez: crea un indicador Transversal con pesos, lo guarda en Mis cálculos, lo sigue editando y elige otro indicador.
+//  1.ª vez: crea un indicador Transversal con la parte del problema de un segmento, lo guarda en Mis cálculos, lo sigue editando y elige otro indicador.
 //  2.ª vez (como si se volviera a abrir el link): todo debe estar igual. Luego prueba el respaldo .json
 //  (descargar, borrar y volver a cargar) y que la página siga funcionando si el navegador no deja guardar.
 (function () {
@@ -136,7 +136,7 @@
         ok(/Cargaste el respaldo respaldo\.json: 1 cálculo guardado/.test(aviso()), 'aviso → ' + aviso().replace('Deshacer', '').trim());
         ok(g.calculos.length === 1 && g.calculos[0].nombre === 'Guardado A' && $$('.tarjeta[data-id]').length === 2 && titulo() === 'Persistente', 'cargar respaldo devuelve los cálculos y el tablero');
         var p = g.actual.indicadores.filter(function (x) { return x.nombre === 'Persistente'; })[0];
-        ok(p && JSON.stringify(p.segmentos) === '[{"nombre":"Hogar","peso":0.7},{"nombre":"Pyme Móvil","peso":null}]', 'con sus segmentos y pesos');
+        ok(p && JSON.stringify(p.segmentos) === '[{"nombre":"Hogar","peso":0.7,"casos":null},{"nombre":"Pyme Móvil","peso":null,"casos":null}]', 'con sus segmentos y su parte del problema');
         // Un archivo que no es respaldo se rechaza con un mensaje simple
         var dt = new DataTransfer();
         dt.items.add(new File(['{"hola": 1}'], 'otro.json', { type: 'application/json' }));
