@@ -46,7 +46,7 @@
     resuelto: 'Qué parte del dolor se comen tus iniciativas con su ejecución esperada. La rayita marca lo que se comerían si todo se cumple.',
     efectividad: 'Qué % del dolor resuelve la iniciativa si se hace completa. Vacío = 0 %.',
     ejecucion: 'Qué % de la iniciativa estará listo de verdad en 2027. 100 % = a tiempo y completa.',
-    aporte: 'Puntos que se pierden si la iniciativa falla, y cómo quedaría la suficiencia sin ella.',
+    aporte: 'Puntos que mueve cada iniciativa con su ejecución esperada. La suma de todas es lo que mueve el indicador. Si dos iniciativas atacan el mismo dolor, lo que se recupera de ese dolor se reparte entre ellas según lo que resuelve cada una (efectividad × ejecución). Ej.: mueve 0,68 pp en total → 0,20 + 0,18 + 0,17 + 0,12 + 0,01 pp.',
     // «¿Qué significa este número?» junto a cada resultado
     suficiencia: 'El número del centro es la suficiencia: qué parte de la brecha cubren tus iniciativas. 100 % o más = alcanza. Ej.: 85 % = te falta cubrir el 15 % de la brecha.',
     mueve: 'Cuántos puntos se mueve el indicador con tus iniciativas y su ejecución esperada. Ej.: churn de 2,80 % que mueve 0,68 pp → queda en 2,12 %.',
@@ -808,7 +808,7 @@
       if (x.etiqueta === 'REEMPLAZAR') {
         lista.push({ tono: 'critico', icono: 'cambiar', ini: id, texto: n(ini.ejecucion) === 0
           ? [nom(ini.nombre), ' no se ejecutará (0 %). Cámbiala o reactívala.']
-          : [nom(ini.nombre), ' aporta solo el ' + pct(x.aportePct) + ' de la brecha. Cámbiala o rediséñala.'], ir: { tipo: 'ini', id: id } });
+          : [nom(ini.nombre), ' aporta solo ' + puntos(x.aporte, ind) + '. Cámbiala o rediséñala.'], ir: { tipo: 'ini', id: id } });
       }
     });
     r.ranking.forEach(function (id) {
@@ -858,9 +858,9 @@
       return h('li', { data: { ini: id }, style: '--k:' + k },
         h('button', { class: 'ap-btn', type: 'button', data: { accion: 'ir', tipo: 'ini', id: id }, 'aria-label': ini.nombre + ': aporta ' + puntos(x.aporte, ind) + '. Ir a la iniciativa en el taller.' },
           h('span', { class: 'ap-nombre' }, ini.nombre),
-          h('span', { class: 'ap-valor' }, puntos(x.aporte, ind), h('small', null, pct(x.aportePct))),
+          h('span', { class: 'ap-valor' }, puntos(x.aporte, ind)),
           h('span', { class: 'ap-barra', 'aria-hidden': 'true' }, h('i', { style: '--v:' + limitar(x.aporte / max, 0, 1).toFixed(4) })),
-          h('span', { class: 'ap-pie' }, chip(ETIQUETA[x.etiqueta], true), h('span', null, 'Si falla, la suficiencia baja a ', h('b', null, pct(x.suficienciaSin))))));
+          h('span', { class: 'ap-pie' }, chip(ETIQUETA[x.etiqueta], true))));
     }));
   }
 
@@ -1167,10 +1167,8 @@
     });
     q.ejecIn = entrada('pct', x.ejecucion, { class: 'entrada', placeholder: '—', 'aria-label': 'Ejecución a 2027 de la iniciativa ' + (i + 1) + ' en porcentaje', data: { campo: 'ejecucion', ini: x.id } });
     q.apValor = h('b');
-    q.apPct = h('small');
     q.apBarra = h('span', { class: 'barra-fina', 'aria-hidden': 'true' }, h('i'));
     q.apChip = h('span');
-    q.apFalla = h('span');
     q.revision = h('div', { class: 'revision' });
     var abierto = !!abiertos[x.id];
     q.detalle = h('div', { class: 'i-detalle', id: ids.det, hidden: !abierto },
@@ -1187,7 +1185,7 @@
       celdas,
       h('div', { class: 'i-ejec' }, h('span', { class: 'et-movil' }, 'Ejecución a 2027'), h('div', { class: 'ejec-ctl' }, q.rango, conUnidad(q.ejecIn, '%'))),
       h('div', { class: 'i-aporte' }, h('span', { class: 'et-movil' }, 'Aporte con la ejecución esperada'),
-        h('div', { class: 'ap-linea' }, q.apValor, q.apPct), q.apBarra, h('div', { class: 'ap-mini' }, q.apChip, q.apFalla)),
+        h('div', { class: 'ap-linea' }, q.apValor), q.apBarra, h('div', { class: 'ap-mini' }, q.apChip)),
       h('div', { class: 'i-mas' },
         h('button', { class: 'btn-icono', type: 'button', 'aria-expanded': String(abierto), 'aria-controls': ids.det, 'aria-label': 'Responsable, fecha y evidencia de la iniciativa ' + (i + 1), data: { accion: 'detalle-ini', id: x.id } }, icono('abajo', 'girar')),
         h('button', { class: 'btn-icono peligro', type: 'button', 'aria-label': 'Borrar la iniciativa ' + (i + 1), data: { accion: 'borrar-ini', id: x.id } }, icono('borrar'))),
@@ -1288,10 +1286,8 @@
       if (!q) return;
       var activa = r.brecha > 0 && !vacio(x.nombre);
       q.apValor.textContent = activa ? puntos(res.aporte, ind) : '—';
-      q.apPct.textContent = activa ? pct(res.aportePct) + ' de la brecha' : '';
       q.apBarra.style.setProperty('--v', activa ? limitar(res.aportePct, 0, 1) : 0);
       fijar(q.apChip, activa ? chip(ETIQUETA[res.etiqueta], true) : null);
-      fijar(q.apFalla, activa ? ['Si falla: ', h('b', null, pct(res.suficienciaSin))] : null);
       fijar(q.revision, res.revision && res.revision !== 'OK'
         ? h('button', { type: 'button', data: { accion: 'detalle-ini', id: x.id, abrir: '1' }, 'aria-label': REVISION[res.revision].txt + ': abrir los detalles' }, chip(REVISION[res.revision], true))
         : null);
@@ -2244,8 +2240,8 @@
     var cx = D0 + nd;
     var rs = r.segmentos;
     // Con varios segmentos, el paso 3 lleva la columna «Aplica a» junto a la ejecución
-    var claves = ['ejec'].concat(rs.varios ? ['aplica'] : [], ['resp', 'fecha', 'evid', 'aporte', 'aportePct', 'sinElla', 'etq', 'rev']);
-    var anchoDe = { ejec: 12, aplica: 22, resp: 18, fecha: 15, evid: 44, aporte: 12, aportePct: 12, sinElla: 13, etq: 15, rev: 20 };
+    var claves = ['ejec'].concat(rs.varios ? ['aplica'] : [], ['resp', 'fecha', 'evid', 'aporte', 'etq', 'rev']);
+    var anchoDe = { ejec: 12, aplica: 22, resp: 18, fecha: 15, evid: 44, aporte: 12, etq: 15, rev: 20 };
     var col = {};
     claves.forEach(function (k, i) { col[k] = cx + i; });
     var ultima = col.rev;
@@ -2354,7 +2350,7 @@
     // Quién aporta más
     f = xBanda(X, f + 1, 'QUIÉN APORTA MÁS   ·   RANKING DE INICIATIVAS', ultima);
     if (con && !cumple && r.ranking.length) {
-      f = xCabecera(X, f, [[0, '#'], [1, 'Iniciativa', true], [2, 'Aporte (pp)'], [3, 'Aporte (% de la brecha)'], [4, 'Si falla, la suficiencia baja a'], [5, 'Etiqueta']]);
+      f = xCabecera(X, f, [[0, '#'], [1, 'Iniciativa', true], [2, 'Aporte (pp)'], [3, 'Etiqueta']]);
       r.ranking.forEach(function (id, puesto) {
         var x = buscar(r.iniciativas, id);
         var ini = buscar(ind.iniciativas, id);
@@ -2362,9 +2358,7 @@
         X.poner(f, 0, puesto + 1, xCalc(null, { h: 'center', negrita: true }));
         X.poner(f, 1, ini.nombre, xCalc(null, { ajustar: true }));
         X.poner(f, 2, x.aporte, xCalc(fPts, { h: 'center', negrita: true }));
-        X.poner(f, 3, x.aportePct, xCalc('0%', { h: 'center' }));
-        X.poner(f, 4, x.suficienciaSin, xCalc('0%', { h: 'center' }));
-        X.poner(f, 5, xTextoChip(et), xChip(et ? et.tono : 'neutro'));
+        X.poner(f, 3, xTextoChip(et), xChip(et ? et.tono : 'neutro'));
         X.alto(f++, Math.max(20, xAlto(ini.nombre, 45)));
       });
     } else {
@@ -2459,8 +2453,8 @@
     f = xCabecera(X, f, [[0, 'N°'], [1, 'Iniciativa', true]]
       .concat(ind.dolores.map(function (d, j) { return [D0 + j, 'D' + (j + 1) + ' · ' + (d.nombre || 'Dolor ' + (j + 1))]; }))
       .concat([[col.ejec, 'Ejecución a 2027']], rs.varios ? [[col.aplica, 'Aplica a (segmentos)', true]] : [], [[col.resp, 'Responsable'], [col.fecha, 'Fecha comprometida'],
-        [col.evid, 'Evidencia que respalda los %', true], [col.aporte, 'Aporte (pp)'], [col.aportePct, 'Aporte (% de la brecha)'],
-        [col.sinElla, 'Si falla, la suficiencia baja a'], [col.etq, 'Etiqueta'], [col.rev, 'Revisión']]));
+        [col.evid, 'Evidencia que respalda los %', true], [col.aporte, 'Aporte (pp)'],
+        [col.etq, 'Etiqueta'], [col.rev, 'Revisión']]));
     var f0 = f;
     ind.iniciativas.forEach(function (x, i) {
       var res = r.iniciativas[i];
@@ -2479,8 +2473,6 @@
       X.poner(f, col.fecha, Excel.serieDeFecha(x.fecha), xEntrada('fecha', { h: 'center' }));
       X.poner(f, col.evid, x.evidencia, xEntrada(null, { ajustar: true }));
       X.poner(f, col.aporte, activa ? res.aporte : '—', xCalc(fPts, { h: 'center', negrita: true }));
-      X.poner(f, col.aportePct, activa ? res.aportePct : '—', xCalc('0%', { h: 'center' }));
-      X.poner(f, col.sinElla, activa ? res.suficienciaSin : '—', xCalc('0%', { h: 'center' }));
       X.poner(f, col.etq, xTextoChip(et), xChip(et ? et.tono : 'neutro'));
       X.poner(f, col.rev, xTextoChip(rev), xChip(rev ? rev.tono : 'neutro'));
       X.alto(f++, Math.max(20, xAlto(x.nombre, 45), xAlto(x.evidencia, 43), xAlto(x.responsable, 17)));

@@ -2,6 +2,9 @@
 // Los valores esperados se leyeron del Excel recalculado (hojas IND01_Churn e IND02_Instalaciones).
 // Única diferencia a propósito: desde el 2 de nov el tablero ya no usa el Estado, así que donde la plantilla
 // dice EN RIESGO el tablero dice APORTA (la suficiencia y todo lo demás siguen iguales).
+// Segunda diferencia a propósito (9 de nov): el aporte de cada iniciativa ya no es «lo que se pierde si falla»
+// (la plantilla) sino su parte de lo que mueve el indicador, así que los aportes suman el total. Por eso
+// aporte, aportePct y ranking se comparan con los valores del tablero, no con los del Excel.
 // Uso: node --test tests/paridad_excel.test.js
 'use strict';
 const test = require('node:test');
@@ -24,9 +27,8 @@ const EXCEL = {
     ppDolorPlan: [0.54917692307692278, 0.19384615384615386, 0.21807692307692303, 0.08076923076923076, 0],
     ppDolorReal: [0.29010153846153847, 0.11630769230769225, 0.20434615384615382, 0.072692307692307681, 0],
     alertas: ['SIN COBERTURA', 'SIN COBERTURA', 'CUBIERTO', 'PESO BAJO', 'PESO BAJO'],
-    aporte: [0.1727169230769231, 0.14638615384615383, 0.11630769230769233, 0.19626923076923081, 0.0079476923076923223],
-    aportePct: [0.21589615384615393, 0.18298269230769232, 0.14538461538461545, 0.24533653846153855, 0.0099346153846154046],
-    sufSin: [0.63841346153846168, 0.67132692307692321, 0.70892500000000014, 0.608973076923077, 0.84437500000000021],
+    aporte: [0.18006302387267906, 0.17301578249336869, 0.11630769230769225, 0.20405769230769227, 0.010003501326259955],
+    aportePct: [0.22507877984084887, 0.2162697281167109, 0.14538461538461533, 0.2550721153846154, 0.012504376657824947],
     etiquetas: ['APORTA', 'APORTA', 'APORTA', 'APORTA', 'REEMPLAZAR'],
     revision: ['OK', 'OK', 'OK', 'OK', 'SIN RESPALDO'],
     ranking: ['Resolución en el primer contacto', 'Nuevo portafolio de planes competitivos', 'Ofertas de retención con modelo predictivo', 'Densificación de red en zonas críticas', 'Campaña de imagen de marca en redes']
@@ -45,12 +47,11 @@ const EXCEL = {
     ppDolorPlan: [4.7127272727272729, 3.5836363636363644, 2.6181818181818191, 1.7181818181818185],
     ppDolorReal: [4.3150909090909106, 3.5836363636363644, 2.6181818181818191, 1.7181818181818185],
     alertas: ['CUBIERTO', 'CUBIERTO', 'CUBIERTO', 'CUBIERTO'],
-    aporte: [3.0927272727272754, 3.5787272727272761, 2.9569090909090914, 1.865454545454547],
-    aportePct: [0.30927272727272753, 0.35787272727272762, 0.29569090909090912, 0.18654545454545471],
-    sufSin: [0.91423636363636374, 0.86563636363636365, 0.9278181818181821, 1.0369636363636365],
+    aporte: [3.1356818181818187, 3.640857954545456, 3.2924147727272732, 2.166136363636364],
+    aportePct: [0.31356818181818186, 0.3640857954545456, 0.32924147727272735, 0.2166136363636364],
     etiquetas: ['APORTA', 'APORTA', 'APORTA', 'APORTA'],
     revision: ['OK', 'OK', 'OK', 'OK'],
-    ranking: ['Contratación de técnicos tercerizados', 'Agendamiento con confirmación por WhatsApp', 'Reposición automática de inventario', 'Validación de factibilidad en el punto de venta']
+    ranking: ['Contratación de técnicos tercerizados', 'Reposición automática de inventario', 'Agendamiento con confirmación por WhatsApp', 'Validación de factibilidad en el punto de venta']
   }
 };
 
@@ -88,7 +89,7 @@ for (const ind of crearEjemplos()) {
     assert.deepEqual(r.dolores.map(d => d.alerta), e.alertas);
     igualLista(r.iniciativas.map(x => x.aporte), e.aporte, 'Aporte');
     igualLista(r.iniciativas.map(x => x.aportePct), e.aportePct, 'Aporte % brecha');
-    igualLista(r.iniciativas.map(x => x.suficienciaSin), e.sufSin, 'Suficiencia si falla');
+    igual(r.iniciativas.reduce((t, x) => t + x.aporte, 0), r.real.pp, 'Los aportes suman lo que mueve');
     assert.deepEqual(r.iniciativas.map(x => x.etiqueta), e.etiquetas);
     assert.deepEqual(r.iniciativas.map(x => x.revision), e.revision);
     const nombre = id => ind.iniciativas.find(x => x.id === id).nombre;

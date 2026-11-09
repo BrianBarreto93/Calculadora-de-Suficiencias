@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,600..900&family=Geist:wght@400..700&family=Geist+Mono:wght@500;600&display=swap">
-  <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/app.css?v=20261109">
 </head>
 <body>
   <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -149,7 +149,7 @@
             <div class="panel-cab">
               <h2 class="mini-titulo" id="aportes-titulo">Quién aporta más</h2><button class="ayuda" type="button" data-ayuda="aporte" aria-label="Qué significa el aporte de cada iniciativa">?</button>
             </div>
-            <p class="mini-ayuda">Puntos que recupera cada iniciativa con su ejecución esperada, y cómo queda la suficiencia si falla.</p>
+            <p class="mini-ayuda">Puntos que mueve cada iniciativa con su ejecución esperada. Sumados dan lo que mueve el indicador.</p>
             <ol class="aportes" id="aportes"></ol>
           </section>
           <section class="panel-oscuro panel-segmentos" id="panel-segmentos" aria-labelledby="seg-titulo" hidden>
@@ -219,7 +219,7 @@
           <dt>Ejecución</dt><dd>% de la iniciativa que de verdad estará listo en 2027 (retrasos o alcance parcial).</dd>
           <dt>Suficiencia</dt><dd>Puntos recuperados ÷ brecha. 100 % o más quiere decir que las iniciativas alcanzan.</dd>
           <dt>Mueve el indicador</dt><dd>Cuántos puntos se mueve el indicador con tus iniciativas: suficiencia × brecha.</dd>
-          <dt>Aporte</dt><dd>Cuánto baja la suficiencia si esa iniciativa falla.</dd>
+          <dt>Aporte</dt><dd>Puntos que mueve la iniciativa. La suma de todas es lo que mueve el indicador.</dd>
           <dt>Segmento</dt><dd>A quién mide el indicador. UMM: Hogar, Pospago, Prepago. UMC: Pyme Fijo, Pyme Móvil. Transversal: segmentos de las dos.</dd>
           <dt>Dolores e iniciativas por segmento</dt><dd>Con varios segmentos, cada uno tiene sus casos analizados y sus dolores. Cada iniciativa dice a qué segmentos aplica y solo resuelve dolores de esos segmentos.</dd>
           <dt>Parte del problema</dt><dd>Qué parte del problema total es de cada segmento. Sale de sus casos analizados; escribe un % en el paso 1 solo si quieres cambiarla.</dd>
@@ -276,9 +276,9 @@
   <div class="aviso" id="aviso" role="status" aria-live="polite"></div>
   <input type="file" id="archivo" accept=".xlsx,.xlsm,.xls,.json" hidden>
 
-  <script src="assets/js/engine.js"></script>
-  <script src="assets/js/ejemplos.js"></script>
-  <script src="assets/js/excel.js"></script>
-  <script src="assets/js/app.js"></script>
+  <script src="assets/js/engine.js?v=20261109"></script>
+  <script src="assets/js/ejemplos.js?v=20261109"></script>
+  <script src="assets/js/excel.js?v=20261109"></script>
+  <script src="assets/js/app.js?v=20261109"></script>
 </body>
 </html>

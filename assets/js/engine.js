@@ -38,7 +38,6 @@
   // Igual que N() de Excel: un número se queda, cualquier otra cosa vale 0.
   function n(v) { return typeof v === 'number' && isFinite(v) ? v : 0; }
   function suma(lista) { var t = 0; for (var i = 0; i < lista.length; i++) t += lista[i]; return t; }
-  function sumaProducto(a, b) { var t = 0; for (var i = 0; i < a.length; i++) t += a[i] * b[i]; return t; }
 
   // BUSCAR aproximado de Excel sobre la tabla del semáforo (ordenada de menor a mayor).
   function colorSemaforo(suf, p) {
@@ -179,12 +178,14 @@
       };
     });
 
-    // Si la iniciativa falla: se divide para deshacer su multiplicación (escenario realista)
+    // Aporte de cada iniciativa: lo que se recupera en cada dolor se reparte entre las iniciativas que lo
+    // atacan, en proporción a lo que cada una come de él (efectividad × ejecución, con tope). Así la suma de
+    // los aportes es exactamente lo que mueve el indicador. (Desde el 9 de nov; antes era «lo que se pierde si
+    // falla», que no sumaba el total y confundía.)
+    var peso = inis.map(function (_, i) { return dolores.map(function (_, j) { return 1 - dejaReal[i][j]; }); });
+    var pesoDolor = dolores.map(function (_, j) { return suma(peso.map(function (fila) { return fila[j]; })); });
     var resultadoIniciativas = inis.map(function (ini, i) {
-      var resSin = dolores.map(function (_, j) { return 1 - quedaReal[j] / dejaReal[i][j]; });
-      var ppSin = problema * sumaProducto(atribucion, resSin);
-      var sufSin = brecha === 0 ? 0 : ppSin / brecha;
-      var aporte = real.pp - ppSin;
+      var aporte = suma(dolores.map(function (_, j) { return pesoDolor[j] === 0 ? 0 : ppDolorReal[j] * peso[i][j] / pesoDolor[j]; }));
       var aportePct = brecha === 0 ? 0 : aporte / brecha;
       var etiqueta = '';
       if (!vacio(ini.nombre)) {
@@ -199,8 +200,6 @@
       }
       return {
         id: ini.id,
-        ppSin: ppSin,
-        suficienciaSin: sufSin,
         aporte: aporte,
         aportePct: aportePct,
         etiqueta: etiqueta,

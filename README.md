@@ -80,6 +80,7 @@ Para compartir:
   - **Lo que mueve un segmento** = lo que recuperan sus dolores. La suma de los segmentos es lo que mueve el indicador, y su «de la brecha» suma la suficiencia total. Un segmento sin dolores deja su parte del problema sin resolver (la página lo avisa).
   - Con un solo segmento todo es igual que antes. Los cálculos guardados antes de este cambio dan el mismo resultado: si tenían varios segmentos, sus dolores quedan «sin segmento» hasta que elijas el de cada uno, y los pesos viejos (que solo repartían los puntos al final) no se usan.
 - El **estado** de una iniciativa (En plan / En riesgo / Retrasada) ya no cuenta: los retrasos se expresan con el % de ejecución. Por eso, donde la plantilla de Excel dice «En riesgo», el tablero dice «Aporta».
+- **Aporte de una iniciativa** (desde el 9 de nov de 2026) = su parte de lo que mueve el indicador, en pp. Lo que se recupera en cada dolor se reparte entre las iniciativas que lo atacan según lo que resuelve cada una (efectividad × ejecución). Por eso los aportes **suman exactamente** lo que mueve el indicador. Antes era «lo que se pierde si la iniciativa falla», que no sumaba el total; el tablero ya no muestra «% de la brecha» ni «si falla» por iniciativa. La plantilla de Excel sigue con el cálculo anterior.
 
 ## Estructura
 

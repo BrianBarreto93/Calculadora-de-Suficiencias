@@ -10,7 +10,7 @@ Una sola vista con dos zonas y una regla que se explica en una frase: **lo oscur
 | Riel "Tus indicadores" | Netflix (filas de títulos) | Una tarjeta por indicador con su pastel en miniatura, su suficiencia y su estado. El ejemplo lleva la marca "Ejemplo" |
 | Cartel | Netflix (título destacado) | Nombre del indicador, frase en palabras simples y 4 tarjetas: mueve el indicador / así quedarías / te faltaría / si todo se cumple |
 | El pastel | Apple (anillos de actividad) | Firma visual del producto (ver abajo) |
-| Lo que debes vigilar · Quién aporta más · Aporte por segmento | — | Alertas ordenadas, ranking de iniciativas con "si falla" y, con 2 o más segmentos, la tabla segmento / parte del problema / mueve / de la brecha y total |
+| Lo que debes vigilar · Quién aporta más · Aporte por segmento | — | Alertas ordenadas, ranking de iniciativas con su aporte en pp (los aportes suman lo que mueve el indicador) y, con 2 o más segmentos, la tabla segmento / parte del problema / mueve / de la brecha y total |
 | Taller (pasos 1, 2 y 3) | Notion (bloques editables) | Formularios y tablas que se editan en el mismo lugar; el resultado cambia en vivo |
 
 ## Agregar indicador, nuevo cálculo y Mis cálculos

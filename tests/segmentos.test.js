@@ -241,3 +241,17 @@ test('Sin límite fijo de indicadores', () => {
   const muchos = Array.from({ length: 80 }, (_, i) => ({ id: 'i' + i, nombre: 'Indicador ' + i }));
   assert.equal(Motor.normalizarDatos({ indicadores: muchos }).indicadores.length, 80);
 });
+
+test('El aporte de las iniciativas suma lo que mueve el indicador (se reparte lo que comen de cada dolor)', () => {
+  const ind = dosSegmentos();
+  ind.iniciativas.push({ id: 'i3', nombre: 'Red Hogar', segmentos: [], efectividad: { a: 0.3 }, ejecucion: 1 });
+  const r = Motor.calcular(ind);
+  // Dolor a (35 % de 2,8 pp): queda (1 − 0,5) × (1 − 0,3) = 0,35 → recupera 0,98 × 0,65 = 0,637 pp, repartido 0,5 : 0,3
+  cerca(r.dolores[0].ppReal, 0.637);
+  cerca(r.iniciativas[0].aporte, 0.637 * 0.5 / 0.8, 'Plan Hogar');
+  cerca(r.iniciativas[2].aporte, 0.637 * 0.3 / 0.8, 'Red Hogar');
+  // Dolor c (30 %): solo Factura clara (50 % × 50 % de ejecución) → 0,84 × 0,25 = 0,21 pp
+  cerca(r.iniciativas[1].aporte, 0.21, 'Factura clara');
+  cerca(r.iniciativas.reduce((t, x) => t + x.aporte, 0), r.real.pp, 'suma = lo que mueve');
+  cerca(r.iniciativas[1].aportePct, 0.21 / 0.8);
+});
