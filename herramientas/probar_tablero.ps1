@@ -1,4 +1,5 @@
 ﻿# Prueba el tablero (suficiencia_cx.html) en un navegador sin ventana (Microsoft Edge o Google Chrome).
+#  0. Acceso: sin sesión pide usuario y contraseña; las demás pruebas entran con la sesión abierta.
 #  1. Interacción: deslizadores, celdas, deshacer, agregar indicador, nuevo cálculo, Mis cálculos, segmentos y pesos, 15 dolores.
 #  2. Importar Excel: carga Plantilla_Suficiencia.xlsx y compara con los ejemplos.
 #  3. Exportar Excel: exporta, relee el archivo, lo edita como lo haría alguien en Excel y lo vuelve a importar.
@@ -27,11 +28,15 @@ $urlRaiz = ([System.Uri](Join-Path $raiz '.')).AbsoluteUri
 if (-not $urlRaiz.EndsWith('/')) { $urlRaiz += '/' }
 $html = [System.IO.File]::ReadAllText((Join-Path $raiz 'suficiencia_cx.html'), [System.Text.Encoding]::UTF8)
 $html = $html.Replace('<head>', '<head><base href="' + $urlRaiz + '">')
+# Las pruebas entran con la sesión abierta (el acceso con usuario y contraseña se prueba aparte, en acceso.js)
+$sesion = '<script>try { sessionStorage.setItem(''suficiencia.acceso.v1'', ''98191e343ffd286b102bd8c60f8752f1fbd00a7a3fa1bf14983adbc912021ece'') } catch (e) {}</script>'
+$conSesion = $html.Replace('<head><base href="' + $urlRaiz + '">', '<head><base href="' + $urlRaiz + '">' + $sesion)
 $sinMovimiento = '--force-prefers-reduced-motion'
 
 function Correr($nombre, $script, $extra) {
     $pagina = Join-Path $temp ($nombre + '.html')
-    $conPrueba = $html.Replace('</body>', '<script src="' + $urlRaiz + 'tests/navegador/' + $script + '"></script></body>')
+    $base = if ($nombre -eq 'acceso') { $html } else { $conSesion }
+    $conPrueba = $base.Replace('</body>', '<script src="' + $urlRaiz + 'tests/navegador/' + $script + '"></script></body>')
     [System.IO.File]::WriteAllText($pagina, $conPrueba, (New-Object System.Text.UTF8Encoding($false)))
     $salida = Join-Path $temp ($nombre + '-dom.txt')
     $perfil = Join-Path $temp ('perfil-' + $nombre)
@@ -69,7 +74,11 @@ function RevisarConExcel($ruta) {
 }
 
 $resultados = @()
-"== Interacción"
+"== Acceso (usuario y contraseña)"
+$r = Correr 'acceso' 'acceso.js' @($sinMovimiento)
+$r
+$resultados += $r
+"`n== Interacción"
 $r = Correr 'interaccion' 'interaccion.js' @($sinMovimiento)
 $r
 $resultados += $r

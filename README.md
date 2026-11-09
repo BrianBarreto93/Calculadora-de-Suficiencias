@@ -46,6 +46,8 @@ Qué necesita cada parte:
 
 ## Cómo se usa
 
+Al abrir la página se piden **usuario y contraseña** (pídelos a quien administra el tablero). La sesión dura mientras la pestaña esté abierta. Es una puerta de cortesía en el navegador: la página es estática y no protege los archivos del servidor.
+
 1. Mira el **ejemplo lleno** (Churn mensual pospago) para ver cómo se llena un cálculo.
 2. Pulsa **+ Agregar indicador** (en **Tus indicadores**) para sumar otro indicador al mismo tablero. Para borrar uno, usa la papelera de su tarjeta.
 3. En el **taller** (la parte blanca), llena los 3 pasos:
@@ -87,6 +89,7 @@ Para compartir:
 ```
 suficiencia_cx.html           Tablero web
 Plantilla_Suficiencia.xlsx    Plantilla de Excel (6 dolores y 8 iniciativas por hoja)
+assets/js/acceso.js           Pide usuario y contraseña antes de mostrar el tablero (solo guarda la huella SHA-256)
 assets/js/engine.js           Motor de cálculo (las mismas fórmulas del Excel)
 assets/js/ejemplos.js         Indicadores de ejemplo (los mismos de la plantilla)
 assets/js/excel.js            Escribe y lee archivos .xlsx sin internet
