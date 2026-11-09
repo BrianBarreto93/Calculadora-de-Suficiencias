@@ -104,7 +104,7 @@ Si no hay internet, se usan las fuentes del sistema y todo sigue funcionando.
 | `assets/js/engine.js` | Motor de cálculo puro. Replica la hoja CÁLCULOS del Excel; funciona en el navegador y en Node |
 | `assets/js/ejemplos.js` | Los dos indicadores de ejemplo (iguales a los del Excel); el tablero muestra el primero |
 | `assets/js/excel.js` | Escribe y lee .xlsx (ZIP + XML) en el navegador y en Node |
-| `assets/js/acceso.js` | Acceso con usuario y contraseña: tapa la página desde el `<head>` hasta que la huella SHA-256 de «usuario:contraseña» coincide; sesión en `sessionStorage` (`suficiencia.acceso.v1`). Las pruebas de navegador entran con la sesión ya abierta, salvo `tests/navegador/acceso.js` |
+| `assets/js/acceso.js` | Acceso con usuario y contraseña: tapa la página desde el `<head>` hasta que la huella SHA-256 de «usuario:contraseña» coincide; sesión en `sessionStorage` (`suficiencia.acceso.v1`). «Cerrar sesión» (botón `#cerrar-sesion` en la barra; en celular, ítem del menú ⋯, ambos con `data-cerrar-sesion`) borra la sesión y vuelve a tapar sin recargar. Las pruebas de navegador entran con la sesión ya abierta, salvo `tests/navegador/acceso.js` |
 | `assets/js/app.js` | Interfaz: pinta, anima, edita, guarda en el navegador, arma el Excel exportado e importa Excel o JSON |
 | `assets/css/app.css` | Estilos con tokens; diseño responsivo con *container queries* |
 | `tests/paridad_excel.test.js` | Comprueba que el motor da lo mismo que el Excel (hasta 12 decimales) |

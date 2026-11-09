@@ -34,7 +34,9 @@
     try {
       ok(w.innerWidth === ANCHO, 'ancho de la pantalla → ' + w.innerWidth + ' px');
       sinDesborde('al abrir');
-      $$('.barra-acciones > button, .barra-acciones .menu-envoltura > button').forEach(function (b) { dentro(b, 'botón «' + b.getAttribute('aria-label') + '»'); });
+      $$('.barra-acciones > button, .barra-acciones .menu-envoltura > button').filter(function (b) { return w.getComputedStyle(b).display !== 'none'; }).forEach(function (b) { dentro(b, 'botón «' + b.getAttribute('aria-label') + '»'); });
+      var salirMenu = $('#menu-mas [data-cerrar-sesion]');
+      ok(w.getComputedStyle($('#cerrar-sesion')).display === 'none' && !!salirMenu && w.getComputedStyle(salirMenu).display !== 'none', 'en celular «Cerrar sesión» pasa al menú «Más opciones»');
       $('[aria-controls="menu-calculos"]').click();
       dentro($('#menu-calculos'), 'Mis cálculos');
       $('.tarjeta--nueva').click();

@@ -29,7 +29,7 @@ if (-not $urlRaiz.EndsWith('/')) { $urlRaiz += '/' }
 $html = [System.IO.File]::ReadAllText((Join-Path $raiz 'suficiencia_cx.html'), [System.Text.Encoding]::UTF8)
 $html = $html.Replace('<head>', '<head><base href="' + $urlRaiz + '">')
 # Las pruebas entran con la sesión abierta (el acceso con usuario y contraseña se prueba aparte, en acceso.js)
-$sesion = '<script>try { sessionStorage.setItem(''suficiencia.acceso.v1'', ''98191e343ffd286b102bd8c60f8752f1fbd00a7a3fa1bf14983adbc912021ece'') } catch (e) {}</script>'
+$sesion = '<script>try { sessionStorage.setItem(''suficiencia.acceso.v1'', ''2da91a7fe632d922d9800248a42855eb7bddae48552b9a37148c89fac7c68748'') } catch (e) {}</script>'
 $conSesion = $html.Replace('<head><base href="' + $urlRaiz + '">', '<head><base href="' + $urlRaiz + '">' + $sesion)
 $sinMovimiento = '--force-prefers-reduced-motion'
 

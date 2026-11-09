@@ -4,18 +4,18 @@
  * Es una puerta de cortesía en el navegador (la página es estática): no protege los archivos del servidor.
  * La clave no está escrita aquí: solo su huella SHA-256 de «usuario:contraseña».
  * La sesión dura lo que la pestaña (sessionStorage): al cerrar la pestaña o el navegador se vuelve a pedir.
+ * «Cerrar sesión» (barra de arriba) borra la sesión y vuelve a tapar la página. Los cálculos no se tocan.
  */
 (function () {
   'use strict';
-  var HUELLA = '98191e343ffd286b102bd8c60f8752f1fbd00a7a3fa1bf14983adbc912021ece';
+  var HUELLA = '2da91a7fe632d922d9800248a42855eb7bddae48552b9a37148c89fac7c68748';
   var CLAVE_SESION = 'suficiencia.acceso.v1';
   var raiz = document.documentElement;
 
   function dentro() {
     try { return window.sessionStorage.getItem(CLAVE_SESION) === HUELLA; } catch (e) { return false; }
   }
-  if (dentro()) return;
-  raiz.classList.add('acceso-bloqueado');
+  if (!dentro()) raiz.classList.add('acceso-bloqueado');
 
   // SHA-256 en JS puro (crypto.subtle no existe al abrir el archivo desde el disco en algunos navegadores)
   function sha256(texto) {
@@ -65,7 +65,22 @@
     var clave = document.getElementById('acceso-clave');
     var error = document.getElementById('acceso-error');
     if (!form) return;
-    usuario.focus();
+    if (raiz.classList.contains('acceso-bloqueado')) usuario.focus();
+    // «Cerrar sesión»: el botón de la barra y, en celular, el del menú «Más opciones»
+    document.addEventListener('click', function (e) {
+      if (!e.target.closest || !e.target.closest('[data-cerrar-sesion]')) return;
+      try { window.sessionStorage.removeItem(CLAVE_SESION); } catch (err) { /* nada */ }
+      Array.prototype.forEach.call(document.querySelectorAll('.menu'), function (m) {
+        m.hidden = true;
+        var b = document.querySelector('[aria-controls="' + m.id + '"]');
+        if (b) b.setAttribute('aria-expanded', 'false');
+      });
+      form.reset();
+      error.hidden = true;
+      clave.removeAttribute('aria-invalid');
+      raiz.classList.add('acceso-bloqueado');
+      usuario.focus();
+    });
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       var huella = sha256(usuario.value.trim().toLowerCase() + ':' + clave.value);

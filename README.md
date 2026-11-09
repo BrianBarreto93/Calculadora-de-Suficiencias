@@ -46,7 +46,7 @@ Qué necesita cada parte:
 
 ## Cómo se usa
 
-Al abrir la página se piden **usuario y contraseña** (pídelos a quien administra el tablero). La sesión dura mientras la pestaña esté abierta. Es una puerta de cortesía en el navegador: la página es estática y no protege los archivos del servidor.
+Al abrir la página se piden **usuario y contraseña** (pídelos a quien administra el tablero). La sesión dura mientras la pestaña esté abierta o hasta que pulses **Cerrar sesión** (arriba a la derecha; en celular, en el menú ⋯). Cerrar sesión no borra tus cálculos. Es una puerta de cortesía en el navegador: la página es estática y no protege los archivos del servidor.
 
 1. Mira el **ejemplo lleno** (Churn mensual pospago) para ver cómo se llena un cálculo.
 2. Pulsa **+ Agregar indicador** (en **Tus indicadores**) para sumar otro indicador al mismo tablero. Para borrar uno, usa la papelera de su tarjeta.
